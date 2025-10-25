@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مبادرة معيار - واجهة المسؤول</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-container">
+                <img src="images/logo.png" alt="شعار مبادرة معيار" class="logo">
+            </div>
+            <div class="title-container">
+                <h1>مبادرة معيار - واجهة المسؤول</h1>
+                <p class="subtitle">مشروع تدريب للطلاب على الاختبارات المعيارية وتحسين جودة أدائهم</p>
+            </div>
+        </div>
+        <div class="admin-info">
+            <span>مرحباً، المسؤول</span>
+            <button id="logout-btn" class="btn-danger">تسجيل الخروج</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="questions">إدارة الأسئلة</button>
+            <button class="tab-btn" data-tab="reports">التقارير والإحصائيات</button>
+            <button class="tab-btn" data-tab="settings">الإعدادات</button>
+        </div>
+        
+        <!-- قسم إدارة الأسئلة -->
+        <div id="questions" class="tab-content active">
+            <h2>إضافة سؤال جديد</h2>
+            <form id="add-question-form">
+                <!-- قسم نص السؤال - سيتم إخفاؤه عند اختيار استيعاب المقروء -->
+                <div class="form-group" id="standard-question-group">
+                    <label for="question-text">نص السؤال</label>
+                    <textarea id="question-text" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="question-type">نوع السؤال</label>
+                    <select id="question-type">
+                        <option value="multiple">اختيار من متعدد</option>
+                        <option value="multiple-with-media">اختيار من متعدد مع مرفق</option>
+                        <option value="reading-comprehension">استيعاب المقروء</option>
+                    </select>
+                </div>
+                
+                <!-- قطعة استيعاب المقروء -->
+                <div class="form-group" id="reading-passage-group" style="display: none;">
+                    <label for="reading-passage">قطعة الاستيعاب</label>
+                    <textarea id="reading-passage" rows="5" placeholder="أدخل نص القطعة هنا..." required></textarea>
+                </div>
+                
+                <!-- أسئلة استيعاب المقروء -->
+                <div id="reading-questions-container" style="display: none;">
+                    <h3>أسئلة القطعة</h3>
+                    <div id="reading-questions-list"></div>
+                    <button type="button" id="add-reading-question" class="btn-primary">إضافة سؤال للقطعة</button>
+                </div>
+                
+                <div class="form-group" id="media-url-group" style="display: none;">
+                    <label for="media-url">رابط اليوتيوب أو الصورة</label>
+                    <input type="url" id="media-url" placeholder="https://example.com/video.jpg أو https://youtube.com/watch?v=...">
+                </div>
+                
+                <!-- قسم الخيارات والإجابة الصحيحة - سيتم إخفاؤه عند اختيار استيعاب المقروء -->
+                <div id="standard-options-section">
+                    <div class="form-group" id="standard-options-group">
+                        <label>عدد الخيارات</label>
+                        <select id="options-count">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4" selected>4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                        </select>
+                    </div>
+                    
+                    <div id="options-container"></div>
+                    
+                    <div class="form-group" id="correct-answer-group">
+                        <label>الإجابة الصحيحة</label>
+                        <div id="correct-answer-container"></div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-success">إضافة السؤال</button>
+            </form>
+            
+            <h2 style="margin-top: 2rem;">بنك الأسئلة</h2>
+            <div id="questions-list"></div>
+        </div>
+        
+        <!-- قسم التقارير -->
+        <div id="reports" class="tab-content">
+            <h2>تقارير الطلاب والإحصائيات</h2>
+            
+            <!-- النسبة العامة -->
+            <div class="statistics-card">
+                <h3>النسبة العامة لجميع الطلاب</h3>
+                <div id="overall-percentage" class="percentage-display">0%</div>
+                <p>مجموع نسب جميع الطلاب ÷ عدد الطلاب</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="top-students-count">عدد الطلاب المطلوب عرضهم (الأفضل أداءً)</label>
+                <input type="number" id="top-students-count" min="1" value="5">
+                <button id="show-top-students" class="btn-success" style="margin-top: 10px;">عرض الأفضل أداءً</button>
+            </div>
+            
+            <!-- أزرار حذف الطلاب -->
+            <div class="form-group" style="margin-top: 20px;">
+                <h3>إدارة بيانات الطلاب</h3>
+                <button id="delete-all-students" class="btn-danger">حذف جميع الطلاب ونتائجهم</button>
+                <button id="delete-selected-students" class="btn-warning">حذف محدد</button>
+            </div>
+            
+            <table id="students-report">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all-students"> تحديد الكل</th>
+                        <th>اسم الطالب</th>
+                        <th>النسبة المئوية</th>
+                        <th>الوقت المستغرق</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            
+            <button id="print-report" class="btn-success" style="margin-top: 20px;">طباعة التقرير</button>
+        </div>
+        
+        <!-- قسم الإعدادات -->
+        <div id="settings" class="tab-content">
+            <h2>إعدادات الاختبار</h2>
+            
+            <div class="form-group">
+                <label for="questions-count">عدد الأسئلة التي تظهر للطالب</label>
+                <input type="number" id="questions-count" min="1" value="10">
+            </div>
+            
+            <div class="form-group">
+                <label for="login-type">نوع دخول الطلاب</label>
+                <select id="login-type">
+                    <option value="open">دخول مفتوح وغير محدود</option>
+                    <option value="restricted">دخول محدود (يتطلب رقم هوية/إقامة)</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="attempts-count-group" style="display: none;">
+                <label for="attempts-count">عدد مرات المحاولة المسموحة للدخول المحدود</label>
+                <input type="number" id="attempts-count" min="1" value="1">
+                <small>سيتم تطبيق هذا العدد على جميع الطلاب المصرح لهم في القائمة أدناه</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="results-display">طريقة عرض النتائج للطلاب</label>
+                <select id="results-display">
+                    <option value="show-answers">إظهار الإجابات (تقديم تغذية راجعة)</option>
+                    <option value="hide-answers">إخفاء الإجابات (عرض عدد الإجابات الصحيحة فقط)</option>
+                </select>
+            </div>
+            
+            <button id="save-settings" class="btn-success">حفظ الإعدادات</button>
+            
+            <!-- قائمة الطلاب المصرح لهم بالدخول -->
+            <div id="authorized-students-section" style="margin-top: 30px; display: none;">
+                <h3>قائمة الطلاب المصرح لهم بالدخول</h3>
+                <div class="form-group">
+                    <label for="student-id">رقم الهوية/الإقامة</label>
+                    <input type="text" id="student-id" placeholder="أدخل رقم الهوية أو الإقامة">
+                </div>
+                <div class="form-group">
+                    <label for="student-name">اسم الطالب</label>
+                    <input type="text" id="student-name" placeholder="أدخل اسم الطالب">
+                </div>
+                <button id="add-authorized-student" class="btn-primary">إضافة طالب</button>
+                
+                <table id="authorized-students-list" style="margin-top: 20px; width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>رقم الهوية/الإقامة</th>
+                            <th>اسم الطالب</th>
+                            <th>عدد المحاولات المستخدمة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                
+                <button id="print-authorized-students" class="btn-success" style="margin-top: 10px;">طباعة القائمة</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="credits">
+        <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        // التحقق من تسجيل الدخول عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!isAdminLoggedIn()) {
+                alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // تسجيل الخروج
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                    logoutAdmin();
+                    window.location.href = 'index.html';
+                }
+            });
+
+            // تهيئة واجهة المسؤول
+            initAdmin();
+        });
+    </script>
+</body>
+</html>

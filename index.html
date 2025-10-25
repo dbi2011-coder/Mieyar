@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مبادرة معيار</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-container">
+                <img src="images/logo.png" alt="شعار مبادرة معيار" class="logo">
+            </div>
+            <div class="title-container">
+                <h1>مبادرة معيار</h1>
+                <p class="subtitle">مشروع تدريب للطلاب على الاختبارات المعيارية وتحسين جودة أدائهم</p>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="welcome-section">
+            <h2>مرحباً بك في مبادرة معيار</h2>
+            <p>منصة تدريبية متكاملة لتحضير الطلاب للاختبارات المعيارية وتحسين مستوى تحصيلهم التعليمي</p>
+            
+            <div class="access-buttons">
+                <button id="admin-btn" class="btn-primary">دخول المسؤول</button>
+                <button id="student-btn" class="btn-success">دخول الطالب</button>
+            </div>
+        </div>
+        
+        <div class="login-form" id="admin-login-form" style="display: none;">
+            <h2>تسجيل الدخول للمسؤول</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">اسم المستخدم</label>
+                    <input type="text" id="username" placeholder="أدخل اسم المستخدم" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" placeholder="أدخل كلمة المرور" required>
+                </div>
+                <button type="submit" class="btn-primary">تسجيل الدخول</button>
+                <button type="button" id="back-btn" class="btn-secondary" style="margin-top: 10px;">رجوع</button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="credits">
+        <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // إظهار نموذج تسجيل الدخول عند النقر على واجهة المسؤول
+        document.getElementById('admin-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelector('.welcome-section').style.display = 'none';
+            document.getElementById('admin-login-form').style.display = 'block';
+        });
+
+        // الانتقال إلى واجهة الطالب
+        document.getElementById('student-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'student.html';
+        });
+
+        // زر الرجوع
+        document.getElementById('back-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('admin-login-form').style.display = 'none';
+            document.querySelector('.welcome-section').style.display = 'block';
+        });
+
+        // معالجة تسجيل الدخول
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (loginAdmin(username, password)) {
+                window.location.href = 'admin.html';
+            } else {
+                alert('اسم المستخدم أو كلمة المرور غير صحيحة');
+                document.getElementById('password').value = '';
+            }
+        });
+
+        // إضافة إمكانية الضغط على Enter لتسجيل الدخول
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('login-form').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>
