@@ -84,11 +84,18 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
+            if (!username || !password) {
+                alert('يرجى إدخال جميع البيانات');
+                return;
+            }
+            
             // استخدام دالة المصادقة من Supabase مباشرة
             const loginSuccess = await window.supabaseLoginAdmin(username, password);
             
             if (loginSuccess) {
                 console.log('✅ تسجيل الدخول ناجح - التوجيه إلى لوحة التحكم');
+                // تأكيد حفظ الجلسة
+                console.log('💾 حالة الجلسة بعد التسجيل:', window.checkAdminSession());
                 window.location.href = 'admin.html';
             } else {
                 alert('اسم المستخدم أو كلمة المرور غير صحيحة');
@@ -104,7 +111,8 @@
         });
 
         // فحص حالة النظام عند التحميل
-        console.log('🚀 نظام مبادرة معيار جاهز - Supabase Mode');
+        console.log('🚀 نظام مبادرة معيار جاهز - Session Storage Mode');
+        console.log('🔍 فحص الجلسة الحالية:', window.checkAdminSession());
     </script>
 </body>
 </html>
