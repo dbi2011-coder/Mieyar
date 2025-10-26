@@ -398,7 +398,7 @@ async function addQuestion(e) {
     }
     
     try {
-        const result = await insertData('questions', question);
+        const result = await window.supabaseInsertData('questions', question);
         if (result) {
             questions.push(result);
             await loadQuestions();
@@ -426,7 +426,7 @@ function resetQuestionForm() {
 
 async function loadQuestions() {
     try {
-        questions = await fetchData('questions', { orderBy: 'created_at' });
+        questions = await window.supabaseFetchData('questions', { orderBy: 'created_at' });
         renderQuestions();
     } catch (error) {
         console.error('Error loading questions:', error);
@@ -519,7 +519,7 @@ function getQuestionTypeText(type) {
 
 async function deleteQuestion(id) {
     if (confirm('هل أنت متأكد من حذف هذا السؤال؟')) {
-        const success = await deleteData('questions', id);
+        const success = await window.supabaseDeleteData('questions', id);
         if (success) {
             questions = questions.filter(q => q.id !== id);
             renderQuestions();
@@ -532,7 +532,7 @@ async function deleteQuestion(id) {
 
 async function loadReports() {
     try {
-        const students = await fetchData('student_results', { orderBy: 'test_date' });
+        const students = await window.supabaseFetchData('student_results', { orderBy: 'test_date' });
         renderStudentReports(students);
     } catch (error) {
         console.error('Error loading reports:', error);
@@ -572,7 +572,7 @@ function renderStudentReports(students) {
 
 async function showTopStudents() {
     const count = parseInt(document.getElementById('top-students-count').value);
-    const students = await fetchData('student_results', { orderBy: 'test_date' });
+    const students = await window.supabaseFetchData('student_results', { orderBy: 'test_date' });
     
     const topStudents = students
         .sort((a, b) => b.percentage - a.percentage)
@@ -600,7 +600,7 @@ async function deleteSelectedStudents() {
         
         for (const checkbox of checkboxes) {
             const studentId = checkbox.getAttribute('data-id');
-            const success = await deleteData('student_results', studentId);
+            const success = await window.supabaseDeleteData('student_results', studentId);
             if (success) successCount++;
         }
         
@@ -611,11 +611,11 @@ async function deleteSelectedStudents() {
 
 async function deleteAllStudents() {
     if (confirm('هل أنت متأكد من حذف جميع الطلاب ونتائجهم؟')) {
-        const students = await fetchData('student_results');
+        const students = await window.supabaseFetchData('student_results');
         let successCount = 0;
         
         for (const student of students) {
-            const success = await deleteData('student_results', student.id);
+            const success = await window.supabaseDeleteData('student_results', student.id);
             if (success) successCount++;
         }
         
@@ -630,7 +630,7 @@ function printReport() {
 
 async function loadSettings() {
     try {
-        const { data, error } = await supabase.rpc('get_settings');
+        const { data, error } = await window.supabase.rpc('get_settings');
         
         if (error) throw error;
         
@@ -670,7 +670,7 @@ async function saveSettings() {
     };
     
     try {
-        const { error } = await supabase
+        const { error } = await window.supabase
             .from('settings')
             .upsert([{
                 setting_key: 'test_settings',
@@ -687,7 +687,7 @@ async function saveSettings() {
 
 async function loadAuthorizedStudents() {
     try {
-        authorizedStudents = await fetchData('authorized_students', { orderBy: 'created_at' });
+        authorizedStudents = await window.supabaseFetchData('authorized_students', { orderBy: 'created_at' });
         renderAuthorizedStudents();
     } catch (error) {
         console.error('Error loading authorized students:', error);
@@ -722,7 +722,7 @@ async function addAuthorizedStudent() {
     }
     
     try {
-        const result = await insertData('authorized_students', {
+        const result = await window.supabaseInsertData('authorized_students', {
             student_id: studentId,
             student_name: studentName,
             used_attempts: 0,
@@ -744,7 +744,7 @@ async function addAuthorizedStudent() {
 
 async function deleteAuthorizedStudent(id) {
     if (confirm('هل أنت متأكد من حذف هذا الطالب؟')) {
-        const success = await deleteData('authorized_students', id);
+        const success = await window.supabaseDeleteData('authorized_students', id);
         if (success) {
             authorizedStudents = authorizedStudents.filter(s => s.id !== id);
             renderAuthorizedStudents();
