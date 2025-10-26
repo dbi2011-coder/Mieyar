@@ -630,38 +630,79 @@ function printReport() {
 
 async function loadSettings() {
     try {
-        const { data, error } = await window.supabase.rpc('get_settings');
+        console.log('📥 جاري تحميل الإعدادات من Supabase...');
         
-        if (error) throw error;
+        const { data, error } = await supabase
+            .from('settings')
+            .select('*')
+            .eq('setting_key', 'test_settings')
+            .single();
+
+        if (error) {
+            console.error('❌ خطأ في تحميل الإعدادات:', error);
+            // استخدام إعدادات افتراضية في حالة الخطأ
+            settings = {
+                questionsCount: 10,
+                loginType: 'open',
+                attemptsCount: 1,
+                resultsDisplay: 'show-answers'
+            };
+        } else if (data) {
+            console.log('✅ تم تحميل الإعدادات:', data.setting_value);
+            settings = data.setting_value;
+        } else {
+            // إذا لم توجد إعدادات، استخدام الافتراضية
+            console.log('ℹ️ لا توجد إعدادات محفوظة، استخدام الإعدادات الافتراضية');
+            settings = {
+                questionsCount: 10,
+                loginType: 'open',
+                attemptsCount: 1,
+                resultsDisplay: 'show-answers'
+            };
+        }
         
-        settings = data || {
+        updateSettingsForm();
+        
+    } catch (error) {
+        console.error('❌ خطأ غير متوقع في تحميل الإعدادات:', error);
+        // استخدام إعدادات افتراضية في حالة الخطأ
+        settings = {
             questionsCount: 10,
             loginType: 'open',
             attemptsCount: 1,
             resultsDisplay: 'show-answers'
         };
-        
         updateSettingsForm();
-    } catch (error) {
-        console.error('Error loading settings:', error);
     }
 }
 
 function updateSettingsForm() {
+    console.log('🔄 تحديث نموذج الإعدادات:', settings);
+    
+    if (!settings) {
+        console.log('⚠️ الإعدادات غير محددة');
+        return;
+    }
+    
+    // تعبئة الحقول بالقيم الحالية
     document.getElementById('questions-count').value = settings.questionsCount || 10;
     document.getElementById('login-type').value = settings.loginType || 'open';
     document.getElementById('attempts-count').value = settings.attemptsCount || 1;
     document.getElementById('results-display').value = settings.resultsDisplay || 'show-answers';
     
+    // إظهار/إخفاء العناصر بناءً على نوع الدخول
     const attemptsGroup = document.getElementById('attempts-count-group');
     const authorizedSection = document.getElementById('authorized-students-section');
     const isRestricted = (settings.loginType || 'open') === 'restricted';
     
     attemptsGroup.style.display = isRestricted ? 'block' : 'none';
     authorizedSection.style.display = isRestricted ? 'block' : 'none';
+    
+    console.log('✅ تم تحديث نموذج الإعدادات');
 }
 
 async function saveSettings() {
+    // جمع البيانات من النموذج
     settings = {
         questionsCount: parseInt(document.getElementById('questions-count').value),
         loginType: document.getElementById('login-type').value,
@@ -669,19 +710,33 @@ async function saveSettings() {
         resultsDisplay: document.getElementById('results-display').value
     };
     
+    console.log('💾 محاولة حفظ الإعدادات:', settings);
+    
     try {
-        const { error } = await window.supabase
+        // استخدام upsert لحفظ الإعدادات
+        const { data, error } = await supabase
             .from('settings')
-            .upsert([{
-                setting_key: 'test_settings',
-                setting_value: settings
-            }]);
+            .upsert([
+                {
+                    setting_key: 'test_settings',
+                    setting_value: settings,
+                    updated_at: new Date().toISOString()
+                }
+            ], {
+                onConflict: 'setting_key'
+            });
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ خطأ في حفظ الإعدادات:', error);
+            throw error;
+        }
+        
+        console.log('✅ تم حفظ الإعدادات بنجاح:', data);
         showAlert('تم حفظ الإعدادات بنجاح', 'success');
+        
     } catch (error) {
-        console.error('Error saving settings:', error);
-        showAlert('خطأ في حفظ الإعدادات', 'error');
+        console.error('❌ خطأ في حفظ الإعدادات:', error);
+        showAlert('خطأ في حفظ الإعدادات: ' + error.message, 'error');
     }
 }
 
