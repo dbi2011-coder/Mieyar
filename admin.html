@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مبادرة معيار - واجهة المسؤول</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- إضافة Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
 </head>
 <body>
     <header>
@@ -205,41 +202,74 @@
         <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
     </footer>
 
+    <!-- تحميل Supabase أولاً -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    
+    <!-- ثم تحميل باقي الملفات -->
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
+    
     <script>
-        // التحقق من تسجيل الدخول بعد تحميل جميع الملفات
-        window.addEventListener('load', function() {
-            checkAdminAccess();
-        });
-
-        async function checkAdminAccess() {
-            // إعطاء وقت لتحميل جميع الدوال
-            await new Promise(resolve => setTimeout(resolve, 200));
+        // فحص المصادقة بعد تحميل جميع الملفات
+        function initializeAdminPage() {
+            console.log('بدء تهيئة صفحة المسؤول...');
+            console.log('الدوال المتاحة:');
+            console.log('- isAdminLoggedIn:', typeof isAdminLoggedIn);
+            console.log('- loginAdmin:', typeof loginAdmin);
+            console.log('- logoutAdmin:', typeof logoutAdmin);
+            console.log('- initAdmin:', typeof initAdmin);
             
-            console.log('فحص تسجيل الدخول...'); // للتdebug
-            console.log('حالة التسجيل:', isAdminLoggedIn()); // للتdebug
-            
-            if (!isAdminLoggedIn()) {
-                alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
-                window.location.href = 'index.html';
-                return false;
+            // التحقق من أن جميع الدوال متاحة
+            if (typeof isAdminLoggedIn !== 'function') {
+                console.error('دالة isAdminLoggedIn غير متاحة!');
+                setTimeout(initializeAdminPage, 100);
+                return;
             }
             
-            // تهيئة واجهة المسؤول
-            initAdmin();
+            // التحقق من تسجيل الدخول
+            const isLoggedIn = isAdminLoggedIn();
+            console.log('حالة تسجيل الدخول:', isLoggedIn);
             
-            // إضافة مستمع حدث تسجيل الخروج
-            document.getElementById('logout-btn').addEventListener('click', function() {
-                if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                    logoutAdmin();
-                    window.location.href = 'index.html';
-                }
-            });
+            if (!isLoggedIn) {
+                alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
+                window.location.href = 'index.html';
+                return;
+            }
             
-            return true;
+            // إذا كان مسجلاً، تهيئة الواجهة
+            if (typeof initAdmin === 'function') {
+                console.log('تهيئة واجهة المسؤول...');
+                initAdmin();
+            } else {
+                console.error('دالة initAdmin غير متاحة!');
+            }
+            
+            // إضافة حدث تسجيل الخروج
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn && typeof logoutAdmin === 'function') {
+                logoutBtn.addEventListener('click', function() {
+                    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                        logoutAdmin();
+                        window.location.href = 'index.html';
+                    }
+                });
+            }
         }
+
+        // بدء التهيئة عندما تكون الصفحة جاهزة
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('صفحة المسؤول محملة، انتظار تحميل الملفات...');
+            // إعطاء وقت لتحميل جميع الملفات
+            setTimeout(initializeAdminPage, 300);
+        });
+
+        // بديل: إذا فشل DOMContentLoaded
+        window.addEventListener('load', function() {
+            console.log('جميع موارد الصفحة محملة');
+            setTimeout(initializeAdminPage, 200);
+        });
     </script>
 </body>
 </html>
