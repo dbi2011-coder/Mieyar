@@ -18,7 +18,7 @@
             </div>
         </div>
         <div class="admin-info">
-            <span>مرحباً، المسؤول</span>
+            <span id="admin-welcome">مرحباً، المسؤول</span>
             <button id="logout-btn" class="btn-danger">تسجيل الخروج</button>
         </div>
     </header>
@@ -34,7 +34,6 @@
         <div id="questions" class="tab-content active">
             <h2>إضافة سؤال جديد</h2>
             <form id="add-question-form">
-                <!-- قسم نص السؤال - سيتم إخفاؤه عند اختيار استيعاب المقروء -->
                 <div class="form-group" id="standard-question-group">
                     <label for="question-text">نص السؤال</label>
                     <textarea id="question-text" rows="3" required></textarea>
@@ -49,13 +48,11 @@
                     </select>
                 </div>
                 
-                <!-- قطعة استيعاب المقروء -->
                 <div class="form-group" id="reading-passage-group" style="display: none;">
                     <label for="reading-passage">قطعة الاستيعاب</label>
                     <textarea id="reading-passage" rows="5" placeholder="أدخل نص القطعة هنا..." required></textarea>
                 </div>
                 
-                <!-- أسئلة استيعاب المقروء -->
                 <div id="reading-questions-container" style="display: none;">
                     <h3>أسئلة القطعة</h3>
                     <div id="reading-questions-list"></div>
@@ -67,7 +64,6 @@
                     <input type="url" id="media-url" placeholder="https://example.com/video.jpg أو https://youtube.com/watch?v=...">
                 </div>
                 
-                <!-- قسم الخيارات والإجابة الصحيحة - سيتم إخفاؤه عند اختيار استيعاب المقروء -->
                 <div id="standard-options-section">
                     <div class="form-group" id="standard-options-group">
                         <label>عدد الخيارات</label>
@@ -99,7 +95,6 @@
         <div id="reports" class="tab-content">
             <h2>تقارير الطلاب والإحصائيات</h2>
             
-            <!-- النسبة العامة -->
             <div class="statistics-card">
                 <h3>النسبة العامة لجميع الطلاب</h3>
                 <div id="overall-percentage" class="percentage-display">0%</div>
@@ -112,7 +107,6 @@
                 <button id="show-top-students" class="btn-success" style="margin-top: 10px;">عرض الأفضل أداءً</button>
             </div>
             
-            <!-- أزرار حذف الطلاب -->
             <div class="form-group" style="margin-top: 20px;">
                 <h3>إدارة بيانات الطلاب</h3>
                 <button id="delete-all-students" class="btn-danger">حذف جميع الطلاب ونتائجهم</button>
@@ -168,7 +162,6 @@
             
             <button id="save-settings" class="btn-success">حفظ الإعدادات</button>
             
-            <!-- قائمة الطلاب المصرح لهم بالدخول -->
             <div id="authorized-students-section" style="margin-top: 30px; display: none;">
                 <h3>قائمة الطلاب المصرح لهم بالدخول</h3>
                 <div class="form-group">
@@ -202,76 +195,71 @@
         <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
     </footer>
 
-    <!-- تحميل Supabase أولاً -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    
-    <!-- ثم تحميل باقي الملفات -->
+    <!-- تحميل الملفات بالترتيب -->
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
     
     <script>
-        // فحص المصادقة بعد تحميل جميع الملفات
-        function initializeAdminPage() {
-            console.log('بدء تهيئة صفحة المسؤول...');
-            console.log('الدوال المتاحة:');
-            console.log('- isAdminLoggedIn:', typeof isAdminLoggedIn);
-            console.log('- loginAdmin:', typeof loginAdmin);
-            console.log('- logoutAdmin:', typeof logoutAdmin);
-            console.log('- initAdmin:', typeof initAdmin);
+        // نظام مصادقة مبسط مباشر
+        function checkAuth() {
+            console.log('🔐 بدء فحص المصادقة...');
             
-            // التحقق من أن جميع الدوال متاحة
-            if (typeof isAdminLoggedIn !== 'function') {
-                console.error('دالة isAdminLoggedIn غير متاحة!');
-                setTimeout(initializeAdminPage, 100);
-                return;
-            }
+            const loggedIn = localStorage.getItem('adminLoggedIn');
+            const loginTime = localStorage.getItem('adminLoginTime');
             
-            // التحقق من تسجيل الدخول
-            const isLoggedIn = isAdminLoggedIn();
-            console.log('حالة تسجيل الدخول:', isLoggedIn);
+            console.log('بيانات localStorage:', { loggedIn, loginTime });
             
-            if (!isLoggedIn) {
+            // فحص بسيط مباشر
+            if (!loggedIn || loggedIn !== 'true') {
+                console.log('❌ غير مسجل دخول - إعادة التوجيه');
                 alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
                 window.location.href = 'index.html';
+                return false;
+            }
+            
+            console.log('✅ مسجل دخول - متابعة التهيئة');
+            return true;
+        }
+        
+        // تهيئة الصفحة
+        function initializePage() {
+            console.log('🚀 تهيئة صفحة المسؤول...');
+            
+            // فحص المصادقة أولاً
+            if (!checkAuth()) {
                 return;
             }
             
-            // إذا كان مسجلاً، تهيئة الواجهة
+            // تهيئة واجهة المسؤول
             if (typeof initAdmin === 'function') {
-                console.log('تهيئة واجهة المسؤول...');
+                console.log('🔧 تهيئة واجهة المسؤول...');
                 initAdmin();
             } else {
-                console.error('دالة initAdmin غير متاحة!');
+                console.error('❌ دالة initAdmin غير موجودة');
             }
             
-            // إضافة حدث تسجيل الخروج
+            // إعداد زر تسجيل الخروج
             const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn && typeof logoutAdmin === 'function') {
+            if (logoutBtn) {
                 logoutBtn.addEventListener('click', function() {
                     if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                        logoutAdmin();
+                        localStorage.removeItem('adminLoggedIn');
+                        localStorage.removeItem('adminLoginTime');
+                        localStorage.removeItem('adminUsername');
                         window.location.href = 'index.html';
                     }
                 });
             }
+            
+            console.log('✅ تهيئة الصفحة مكتملة');
         }
-
-        // بدء التهيئة عندما تكون الصفحة جاهزة
+        
+        // بدء التهيئة عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('صفحة المسؤول محملة، انتظار تحميل الملفات...');
-            // إعطاء وقت لتحميل جميع الملفات
-            setTimeout(initializeAdminPage, 300);
+            console.log('📄 صفحة المسؤول محملة');
+            setTimeout(initializePage, 100);
         });
-
-        // بديل: إذا فشل DOMContentLoaded
-        window.addEventListener('load', function() {
-            console.log('جميع موارد الصفحة محملة');
-            setTimeout(initializeAdminPage, 200);
-        });
-    </script> src="js/admin-auth.js"></script>
-    
+    </script>
 </body>
 </html>
-
