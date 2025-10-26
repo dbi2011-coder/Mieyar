@@ -322,12 +322,19 @@ function updateNavigationButtons() {
     
     if (prevBtn) {
         prevBtn.disabled = currentQuestionIndex === 0;
+        prevBtn.style.display = currentQuestionIndex === 0 ? 'none' : 'block';
     }
     
     if (nextBtn && submitBtn) {
         const isLastQuestion = currentQuestionIndex === questions.length - 1;
         nextBtn.style.display = isLastQuestion ? 'none' : 'block';
         submitBtn.style.display = isLastQuestion ? 'block' : 'none';
+        
+        // التأكد من أن الأزرار مرئية
+        nextBtn.style.visibility = 'visible';
+        nextBtn.style.opacity = '1';
+        submitBtn.style.visibility = 'visible';
+        submitBtn.style.opacity = '1';
     }
 }
 
@@ -479,7 +486,7 @@ function showResults(score, percentage, timeTaken) {
                                     </div>
                                 </div>
                             ` : ''}
-                            <p><strong>النص:</strong> ${question.text}</p>
+                            <p><strong>السؤال:</strong> ${question.text}</p>
                             <p><strong>إجابتك:</strong> ${studentAnswerText}</p>
                             <p><strong>الإجابة الصحيحة:</strong> ${correctAnswerText}</p>
                             <p class="${isCorrect ? 'correct-text' : 'incorrect-text'}">
