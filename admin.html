@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مبادرة معيار - واجهة المسؤول</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- تحميل Supabase في الhead -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <header>
@@ -26,13 +24,13 @@
     </header>
     
     <div class="container">
-        <!-- محتوى الصفحة (نفس المحتوى السابق) -->
         <div class="tabs">
             <button class="tab-btn active" data-tab="questions">إدارة الأسئلة</button>
             <button class="tab-btn" data-tab="reports">التقارير والإحصائيات</button>
             <button class="tab-btn" data-tab="settings">الإعدادات</button>
         </div>
         
+        <!-- قسم إدارة الأسئلة -->
         <div id="questions" class="tab-content active">
             <h2>إضافة سؤال جديد</h2>
             <form id="add-question-form">
@@ -93,6 +91,7 @@
             <div id="questions-list"></div>
         </div>
         
+        <!-- قسم التقارير -->
         <div id="reports" class="tab-content">
             <h2>تقارير الطلاب والإحصائيات</h2>
             
@@ -130,6 +129,7 @@
             <button id="print-report" class="btn-success" style="margin-top: 20px;">طباعة التقرير</button>
         </div>
         
+        <!-- قسم الإعدادات -->
         <div id="settings" class="tab-content">
             <h2>إعدادات الاختبار</h2>
             
@@ -195,34 +195,108 @@
         <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
     </footer>
 
-    <!-- تحميل الملفات بالترتيب -->
+    <!-- تحميل Supabase أولاً -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
+    
+    <!-- ثم باقي الملفات -->
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
     
     <script>
-        // تهيئة الصفحة بعد تحميل كل شيء
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔧 تهيئة صفحة المسؤول...');
+        // نظام مصادقة مبسط ومباشر
+        function checkAdminAuth() {
+            console.log('🔐 فحص المصادقة...');
             
-            // فحص المصادقة
-            if (!isAdminLoggedIn()) {
+            // فحص مباشر من localStorage بدون اعتماد على دوال Supabase
+            const adminLoggedIn = localStorage.getItem('adminLoggedIn');
+            const loginTime = localStorage.getItem('adminLoginTime');
+            
+            console.log('بيانات المصادقة:', { adminLoggedIn, loginTime });
+            
+            if (!adminLoggedIn || adminLoggedIn !== 'true') {
+                console.log('❌ غير مسجل دخول');
+                return false;
+            }
+            
+            // التحقق من انتهاء الجلسة
+            if (loginTime) {
+                const loginDate = new Date(loginTime);
+                const currentDate = new Date();
+                const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
+                
+                console.log('⏰ مدة الجلسة:', hoursDiff.toFixed(2), 'ساعة');
+                
+                if (hoursDiff > 24) {
+                    console.log('❌ انتهت مدة الجلسة');
+                    localStorage.removeItem('adminLoggedIn');
+                    localStorage.removeItem('adminLoginTime');
+                    return false;
+                }
+            }
+            
+            console.log('✅ مسجل دخول بنجاح');
+            return true;
+        }
+        
+        // تهيئة الصفحة بعد تحميل كل شيء
+        function initializeAdminPage() {
+            console.log('🚀 بدء تهيئة صفحة المسؤول...');
+            
+            // فحص المصادقة أولاً
+            if (!checkAdminAuth()) {
                 alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
                 window.location.href = 'index.html';
                 return;
             }
             
+            console.log('✅ تم التحقق من المصادقة - تهيئة الواجهة');
+            
             // تهيئة واجهة المسؤول
-            initAdmin();
+            if (typeof initAdmin === 'function') {
+                console.log('🔧 جاري تهيئة واجهة المسؤول...');
+                initAdmin();
+            } else {
+                console.error('❌ دالة initAdmin غير موجودة');
+            }
             
             // إعداد زر تسجيل الخروج
-            document.getElementById('logout-btn').addEventListener('click', function() {
-                if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                    logoutAdmin();
-                    window.location.href = 'index.html';
-                }
-            });
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                        localStorage.removeItem('adminLoggedIn');
+                        localStorage.removeItem('adminLoginTime');
+                        localStorage.removeItem('adminUsername');
+                        window.location.href = 'index.html';
+                    }
+                });
+            }
+            
+            console.log('✅ تهيئة الصفحة مكتملة');
+        }
+        
+        // الانتظار حتى تحميل جميع الملفات
+        function waitForAllFiles() {
+            console.log('⏳ انتظار تحميل الملفات...');
+            
+            // التحقق من تحميل جميع الدوال الأساسية
+            if (typeof supabase !== 'undefined' && 
+                typeof initAdmin !== 'undefined' && 
+                typeof isAdminLoggedIn !== 'undefined') {
+                console.log('✅ جميع الملفات محملة');
+                initializeAdminPage();
+            } else {
+                console.log('🔄 لا يزال بعض الملفات جاري التحميل...');
+                setTimeout(waitForAllFiles, 100);
+            }
+        }
+        
+        // بدء العملية عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 صفحة المسؤول محملة - بدء التحقق من الملفات');
+            setTimeout(waitForAllFiles, 300);
         });
     </script>
 </body>
