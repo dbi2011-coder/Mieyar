@@ -99,13 +99,21 @@ function startTest(studentName) {
     document.getElementById('restricted-login').style.display = 'none';
     document.getElementById('test-container').style.display = 'block';
     
-    loadQuestionsForTest();
-    displayCurrentQuestion();
-    
-    startTime = new Date();
-    startTimer();
-    
-    localStorage.setItem('currentStudent', studentName);
+    // تحميل الأسئلة وعرضها
+    loadQuestionsForTest().then(() => {
+        displayCurrentQuestion();
+        
+        // بدء المؤقت بعد تحميل الأسئلة
+        startTime = new Date();
+        startTimer();
+        
+        // حفظ اسم الطالب
+        localStorage.setItem('currentStudent', studentName);
+    }).catch(error => {
+        console.error('Error starting test:', error);
+        alert('حدث خطأ في بدء الاختبار');
+        showLoginInterface();
+    });
 }
 
 async function loadQuestionsForTest() {
@@ -118,13 +126,16 @@ async function loadQuestionsForTest() {
             return;
         }
         
+        console.log('عدد الأسئلة المحملة:', allQuestions.length); // للتdebug
+        
         // تحويل أسئلة الاستيعاب إلى أسئلة فردية
         const flattenedQuestions = [];
         allQuestions.forEach(question => {
             if (question.question_type === 'reading-comprehension' && question.passage_questions) {
-                question.passage_questions.forEach(passageQ => {
+                // إضافة كل سؤال من أسئلة القطعة كسؤال منفصل
+                question.passage_questions.forEach((passageQ, qIndex) => {
                     flattenedQuestions.push({
-                        id: passageQ.id,
+                        id: `${question.id}_${qIndex}`,
                         text: passageQ.text,
                         type: 'reading-comprehension-item',
                         options: passageQ.options,
@@ -134,20 +145,25 @@ async function loadQuestionsForTest() {
                     });
                 });
             } else {
+                // الأسئلة العادية
                 flattenedQuestions.push({
                     id: question.id,
                     text: question.question_text,
                     type: question.question_type,
-                    options: question.options,
+                    options: question.options || [],
                     correctAnswer: question.correct_answer,
                     mediaUrl: question.media_url
                 });
             }
         });
         
+        console.log('الأسئلة بعد التحويل:', flattenedQuestions); // للتdebug
+        
         // اختيار عدد عشوائي من الأسئلة
-        const questionsCount = Math.min(settings.questionsCount, flattenedQuestions.length);
+        const questionsCount = Math.min(settings.questionsCount || 10, flattenedQuestions.length);
         questions = getRandomQuestions(flattenedQuestions, questionsCount);
+        
+        console.log('الأسئلة المختارة للاختبار:', questions); // للتdebug
         
         // تهيئة الإجابات
         studentAnswers = new Array(questions.length).fill(null);
@@ -155,18 +171,36 @@ async function loadQuestionsForTest() {
     } catch (error) {
         console.error('Error loading questions for test:', error);
         alert('حدث خطأ في تحميل الأسئلة');
-        showLoginInterface();
+        throw error;
     }
 }
 
 function getRandomQuestions(allQuestions, count) {
-    const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+    // نسخ المصفوفة وخلطها عشوائياً
+    const shuffled = [...allQuestions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     return shuffled.slice(0, count);
 }
 
 function displayCurrentQuestion() {
     const container = document.getElementById('questions-container');
+    
+    if (!container) {
+        console.error('عنصر questions-container غير موجود');
+        return;
+    }
+    
+    if (questions.length === 0) {
+        container.innerHTML = '<p>لا توجد أسئلة متاحة</p>';
+        return;
+    }
+    
     const question = questions[currentQuestionIndex];
+    
+    console.log('عرض السؤال:', question); // للتdebug
     
     container.innerHTML = '';
     
@@ -188,7 +222,7 @@ function displayCurrentQuestion() {
     }
     
     questionHTML += `
-        <p class="question-text">${question.text}</p>
+        <p class="question-text"><strong>${question.text}</strong></p>
     `;
     
     // إضافة المرفق إذا كان النوع يحتوي على مرفق
@@ -203,17 +237,23 @@ function displayCurrentQuestion() {
         `;
     }
     
-    questionHTML += `
-        <div class="options-container">
-            ${question.options.map((option, index) => `
-                <div class="option-item">
-                    <input type="radio" name="answer" id="option-${index}" value="${index + 1}" 
-                           ${studentAnswers[currentQuestionIndex] === index + 1 ? 'checked' : ''}>
-                    <label for="option-${index}">${option}</label>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    // إضافة الخيارات
+    if (question.options && question.options.length > 0) {
+        questionHTML += `
+            <div class="options-container">
+                ${question.options.map((option, index) => `
+                    <div class="option-item">
+                        <input type="radio" name="answer" id="option-${currentQuestionIndex}-${index}" 
+                               value="${index + 1}" 
+                               ${studentAnswers[currentQuestionIndex] === index + 1 ? 'checked' : ''}>
+                        <label for="option-${currentQuestionIndex}-${index}">${option}</label>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        questionHTML += `<p>لا توجد خيارات متاحة لهذا السؤال</p>`;
+    }
     
     questionDiv.innerHTML = questionHTML;
     container.appendChild(questionDiv);
@@ -228,11 +268,17 @@ function displayCurrentQuestion() {
     container.appendChild(navigationDiv);
     
     // إضافة مستمعي الأحداث للخيارات
-    question.options.forEach((_, index) => {
-        document.getElementById(`option-${index}`).addEventListener('change', function() {
-            studentAnswers[currentQuestionIndex] = parseInt(this.value);
+    if (question.options && question.options.length > 0) {
+        question.options.forEach((_, index) => {
+            const radioBtn = document.getElementById(`option-${currentQuestionIndex}-${index}`);
+            if (radioBtn) {
+                radioBtn.addEventListener('change', function() {
+                    studentAnswers[currentQuestionIndex] = parseInt(this.value);
+                    console.log('تم اختيار الإجابة:', studentAnswers[currentQuestionIndex]); // للتdebug
+                });
+            }
         });
-    });
+    }
 }
 
 function previousQuestion() {
@@ -243,20 +289,30 @@ function previousQuestion() {
 }
 
 function nextQuestion() {
+    // حفظ الإجابة الحالية أولاً
+    const currentAnswer = document.querySelector('input[name="answer"]:checked');
+    if (currentAnswer) {
+        studentAnswers[currentQuestionIndex] = parseInt(currentAnswer.value);
+    }
+    
     if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
         displayCurrentQuestion();
     } else {
+        // إذا كان هذا آخر سؤال، إنهاء الاختبار
         submitTest();
     }
 }
 
 function startTimer() {
     clearInterval(timerInterval);
+    updateTimer(); // تحديث فوري
     timerInterval = setInterval(updateTimer, 1000);
 }
 
 function updateTimer() {
+    if (!startTime) return;
+    
     const currentTime = new Date();
     const elapsedTime = Math.floor((currentTime - startTime) / 1000);
     
@@ -264,12 +320,22 @@ function updateTimer() {
     const minutes = Math.floor((elapsedTime % 3600) / 60);
     const seconds = elapsedTime % 60;
     
-    document.getElementById('timer').textContent = 
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const timerElement = document.getElementById('timer');
+    if (timerElement) {
+        timerElement.textContent = 
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
 }
 
 async function submitTest() {
+    // إيقاف المؤقت
     clearInterval(timerInterval);
+    
+    // التأكد من حفظ الإجابة الأخيرة
+    const currentAnswer = document.querySelector('input[name="answer"]:checked');
+    if (currentAnswer) {
+        studentAnswers[currentQuestionIndex] = parseInt(currentAnswer.value);
+    }
     
     const endTime = new Date();
     const timeTaken = document.getElementById('timer').textContent;
@@ -278,11 +344,13 @@ async function submitTest() {
     const score = calculateScore();
     const percentage = Math.round((score / questions.length) * 100);
     
+    console.log('النتيجة:', { score, percentage, timeTaken, answers: studentAnswers }); // للتdebug
+    
     // حفظ نتيجة الطالب
     const studentName = localStorage.getItem('currentStudent');
     
     try {
-        await window.supabaseInsertData('student_results', {
+        const result = await window.supabaseInsertData('student_results', {
             student_name: studentName,
             score: score,
             total_questions: questions.length,
@@ -290,6 +358,10 @@ async function submitTest() {
             time_taken: timeTaken,
             answers: studentAnswers
         });
+        
+        if (result) {
+            console.log('تم حفظ النتيجة بنجاح:', result);
+        }
         
         // عرض النتائج
         showResults(score, percentage, timeTaken);
@@ -318,6 +390,11 @@ function showResults(score, percentage, timeTaken) {
     document.getElementById('results-container').style.display = 'block';
     
     const container = document.getElementById('results-container');
+    if (!container) {
+        console.error('عنصر results-container غير موجود');
+        return;
+    }
+    
     container.innerHTML = '';
     
     const resultsDiv = document.createElement('div');
@@ -338,8 +415,8 @@ function showResults(score, percentage, timeTaken) {
                 ${questions.map((question, index) => {
                     const studentAnswer = studentAnswers[index];
                     const isCorrect = studentAnswer === question.correctAnswer;
-                    const studentAnswerText = studentAnswer ? question.options[studentAnswer - 1] : 'لم تجب';
-                    const correctAnswerText = question.options[question.correctAnswer - 1];
+                    const studentAnswerText = studentAnswer && question.options ? question.options[studentAnswer - 1] : 'لم تجب';
+                    const correctAnswerText = question.options ? question.options[question.correctAnswer - 1] : 'غير متوفر';
                     
                     return `
                         <div class="question-feedback">
@@ -380,3 +457,10 @@ function getYouTubeEmbedUrl(url) {
     const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
     return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : url;
 }
+
+// جعل الدوال متاحة globally للاستدعاء من HTML
+window.validateRestrictedLogin = validateRestrictedLogin;
+window.startTest = startTest;
+window.previousQuestion = previousQuestion;
+window.nextQuestion = nextQuestion;
+window.submitTest = submitTest;
