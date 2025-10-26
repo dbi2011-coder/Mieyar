@@ -1,38 +1,14 @@
-// نظام المصادقة وإدارة الجلسات
-
+// نظام المصادقة مع Supabase
 function loginAdmin(username, password) {
-    if (username === 'عاصم البيشي' && password === '0509894176') {
-        localStorage.setItem('adminLoggedIn', 'true');
-        localStorage.setItem('adminLoginTime', new Date().toISOString());
-        return true;
-    }
-    return false;
+    return window.loginAdmin(username, password);
 }
 
 function logoutAdmin() {
-    localStorage.removeItem('adminLoggedIn');
-    localStorage.removeItem('adminLoginTime');
+    return window.logoutAdmin();
 }
 
 function isAdminLoggedIn() {
-    const loggedIn = localStorage.getItem('adminLoggedIn');
-    const loginTime = localStorage.getItem('adminLoginTime');
-    
-    if (!loggedIn || !loginTime) {
-        return false;
-    }
-    
-    // التحقق من انتهاء الجلسة (24 ساعة)
-    const loginDate = new Date(loginTime);
-    const currentDate = new Date();
-    const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
-    
-    if (hoursDiff > 24) {
-        logoutAdmin();
-        return false;
-    }
-    
-    return true;
+    return window.isAdminLoggedIn();
 }
 
 function getAdminSessionTime() {
