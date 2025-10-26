@@ -1,8 +1,9 @@
 // الدوال العامة والمشتركة بين الصفحات
 
-// دالة لتحميل البيانات من localStorage
-function loadFromStorage(key, defaultValue = null) {
+// دالة لتحميل البيانات من Supabase
+async function loadFromStorage(key, defaultValue = null) {
     try {
+        // للتوافق مع الكود القديم، نستخدم localStorage مؤقتاً
         const item = localStorage.getItem(key);
         return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
@@ -11,7 +12,7 @@ function loadFromStorage(key, defaultValue = null) {
     }
 }
 
-// دالة لحفظ البيانات في localStorage
+// دالة لحفظ البيانات في localStorage (للإعدادات المؤقتة)
 function saveToStorage(key, data) {
     try {
         localStorage.setItem(key, JSON.stringify(data));
@@ -24,8 +25,12 @@ function saveToStorage(key, data) {
 
 // دالة لعرض رسائل التنبيه بشكل أفضل
 function showAlert(message, type = 'info') {
+    // إزالة أي تنبيهات سابقة
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
+    alertDiv.className = `custom-alert alert-${type}`;
     alertDiv.style.cssText = `
         position: fixed;
         top: 20px;
@@ -33,9 +38,11 @@ function showAlert(message, type = 'info') {
         padding: 15px 20px;
         border-radius: 5px;
         color: white;
-        z-index: 1000;
+        z-index: 10000;
         max-width: 400px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 14px;
     `;
     
     const colors = {
@@ -51,7 +58,9 @@ function showAlert(message, type = 'info') {
     document.body.appendChild(alertDiv);
     
     setTimeout(() => {
-        alertDiv.remove();
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
     }, 4000);
 }
 
@@ -66,12 +75,14 @@ function formatTime(seconds) {
 
 // دالة للتحقق من صحة رابط YouTube
 function isValidYouTubeUrl(url) {
+    if (!url) return false;
     const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})$/;
     return pattern.test(url);
 }
 
 // دالة للتحقق من صحة رابط الصورة
 function isValidImageUrl(url) {
+    if (!url) return false;
     const pattern = /^(https?:\/\/).+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i;
     return pattern.test(url);
 }
