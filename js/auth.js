@@ -1,50 +1,70 @@
-// نظام المصادقة مع Supabase - الإصدار المعدل
+// نظام المصادقة مع Supabase - الإصدار النهائي
+
+// دالة تسجيل الدخول المعدلة
 async function loginAdmin(username, password) {
-    console.log('🔐 محاولة تسجيل دخول:', username);
+    console.log('🔐 محاولة تسجيل دخول إلى Supabase:', username);
     
     try {
-        // استدعاء الدالة المخزنة في Supabase
-        const { data, error } = await supabase.rpc('verify_admin_password', {
-            p_username: username,
-            p_password: password
-        });
+        // طريقة مباشرة - التحقق من الجدول مباشرة
+        const { data, error } = await supabase
+            .from('admins')
+            .select('*')
+            .eq('username', username)
+            .single();
 
         if (error) {
-            console.error('❌ خطأ في تسجيل الدخول:', error);
+            console.error('❌ خطأ في الاستعلام:', error);
             return false;
         }
         
-        if (data) {
+        if (!data) {
+            console.log('❌ المستخدم غير موجود');
+            return false;
+        }
+        
+        // استخدام الدالة المخزنة للتحقق من كلمة المرور
+        const { data: loginResult, error: loginError } = await supabase
+            .rpc('verify_admin_password', {
+                p_username: username,
+                p_password: password
+            });
+
+        if (loginError) {
+            console.error('❌ خطأ في التحقق من كلمة المرور:', loginError);
+            return false;
+        }
+        
+        if (loginResult) {
             localStorage.setItem('adminLoggedIn', 'true');
             localStorage.setItem('adminLoginTime', new Date().toISOString());
             localStorage.setItem('adminUsername', username);
-            console.log('✅ تسجيل الدخول ناجح');
+            console.log('✅ تسجيل الدخول ناجح مع Supabase');
             return true;
         } else {
-            console.log('❌ بيانات الدخول غير صحيحة');
+            console.log('❌ كلمة المرور غير صحيحة');
             return false;
         }
+        
     } catch (error) {
-        console.error('❌ خطأ في الاتصال:', error);
+        console.error('❌ خطأ غير متوقع:', error);
         return false;
     }
 }
 
+// دالة تسجيل الخروج
 function logoutAdmin() {
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminLoginTime');
     localStorage.removeItem('adminUsername');
-    console.log('✅ تسجيل الخروج');
+    console.log('✅ تم تسجيل الخروج');
 }
 
+// دالة التحقق من تسجيل الدخول
 function isAdminLoggedIn() {
     const loggedIn = localStorage.getItem('adminLoggedIn');
     const loginTime = localStorage.getItem('adminLoginTime');
     
-    console.log('🔍 فحص التسجيل:', { loggedIn, loginTime });
-    
     if (!loggedIn || loggedIn !== 'true') {
-        console.log('❌ غير مسجل دخول');
         return false;
     }
     
@@ -54,19 +74,16 @@ function isAdminLoggedIn() {
         const currentDate = new Date();
         const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
         
-        console.log('⏰ مدة الجلسة:', hoursDiff.toFixed(2), 'ساعة');
-        
         if (hoursDiff > 24) {
-            console.log('❌ انتهت مدة الجلسة');
             logoutAdmin();
             return false;
         }
     }
     
-    console.log('✅ مسجل دخول');
     return true;
 }
 
+// دالة الحصول على وقت الجلسة
 function getAdminSessionTime() {
     const loginTime = localStorage.getItem('adminLoginTime');
     if (!loginTime) return '0:00';
