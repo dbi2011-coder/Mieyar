@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مبادرة معيار - واجهة الطالب</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-container">
+                <img src="images/logo.png" alt="شعار مبادرة معيار" class="logo">
+            </div>
+            <div class="title-container">
+                <h1>مبادرة معيار - واجهة الطالب</h1>
+                <p class="subtitle">مشروع تدريب للطلاب على الاختبارات المعيارية وتحسين جودة أدائهم</p>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- واجهة الدخول المفتوح -->
+        <div id="open-login" class="login-form" style="display: none;">
+            <h2>بدء الاختبار</h2>
+            <div class="form-group">
+                <label for="student-name">اسم الطالب</label>
+                <input type="text" id="student-name" placeholder="أدخل اسمك" required>
+            </div>
+            <button id="start-test" class="btn-primary">بدء الاختبار</button>
+        </div>
+        
+        <!-- واجهة الدخول المحدود -->
+        <div id="restricted-login" class="login-form" style="display: none;">
+            <h2>الدخول إلى الاختبار</h2>
+            <div class="form-group">
+                <label for="student-id-input">رقم الهوية/الإقامة</label>
+                <input type="text" id="student-id-input" placeholder="أدخل رقم الهوية أو الإقامة" required>
+            </div>
+            <div class="form-group">
+                <label for="student-name-input">اسم الطالب</label>
+                <input type="text" id="student-name-input" placeholder="أدخل اسمك" required>
+            </div>
+            <button id="validate-login" class="btn-primary">الدخول إلى الاختبار</button>
+        </div>
+        
+        <!-- واجهة الاختبار -->
+        <div id="test-container" style="display: none;">
+            <div class="timer" id="timer">00:00:00</div>
+            <div id="questions-container"></div>
+            <button id="submit-test" class="btn-success" style="margin-top: 20px;">إنهاء الاختبار</button>
+        </div>
+        
+        <!-- واجهة النتائج -->
+        <div id="results-container" style="display: none;"></div>
+    </div>
+
+    <footer class="credits">
+        <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/student.js"></script>
+    <script>
+        // تهيئة واجهة الطالب
+        document.addEventListener('DOMContentLoaded', function() {
+            initStudent();
+            
+            // مستمعي الأحداث للأزرار
+            document.getElementById('start-test').addEventListener('click', function() {
+                const studentName = document.getElementById('student-name').value.trim();
+                if (studentName) {
+                    startTest(studentName);
+                } else {
+                    alert('يرجى إدخال اسم الطالب');
+                }
+            });
+            
+            document.getElementById('validate-login').addEventListener('click', validateRestrictedLogin);
+            document.getElementById('submit-test').addEventListener('click', submitTest);
+        });
+    </script>
+</body>
+</html>
