@@ -5,58 +5,105 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Create Supabase client
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Authentication functions
-async function supabaseLoginAdmin(username, password) {
-    try {
-        const { data, error } = await supabaseClient
-            .rpc('verify_admin_password', {
-                p_username: username,
-                p_password: password
-            });
+// Authentication functions - باستخدام جلسات Supabase الحقيقية
+class AdminSession {
+    constructor() {
+        this.sessionKey = 'admin_session_token';
+        this.init();
+    }
 
-        if (error) {
-            console.error('Login error:', error);
+    init() {
+        // محاولة استعادة الجلسة من sessionStorage
+        const savedSession = sessionStorage.getItem(this.sessionKey);
+        if (savedSession) {
+            try {
+                this.currentSession = JSON.parse(savedSession);
+                console.log('✅ تم استعادة الجلسة:', this.currentSession);
+            } catch (e) {
+                console.error('❌ خطأ في استعادة الجلسة:', e);
+                this.clearSession();
+            }
+        }
+    }
+
+    async login(username, password) {
+        try {
+            console.log('🔐 محاولة تسجيل الدخول:', username);
+            
+            const { data, error } = await supabaseClient
+                .rpc('verify_admin_password', {
+                    p_username: username,
+                    p_password: password
+                });
+
+            if (error) {
+                console.error('❌ خطأ في تسجيل الدخول:', error);
+                return false;
+            }
+            
+            console.log('✅ نتيجة التحقق من كلمة المرور:', data);
+            
+            if (data) {
+                // إنشاء جلسة جديدة
+                this.currentSession = {
+                    username: username,
+                    loginTime: new Date().toISOString(),
+                    isLoggedIn: true,
+                    token: this.generateToken()
+                };
+                
+                // حفظ الجلسة في sessionStorage
+                sessionStorage.setItem(this.sessionKey, JSON.stringify(this.currentSession));
+                
+                console.log('✅ تم تسجيل الدخول بنجاح في Supabase');
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('❌ خطأ في تسجيل الدخول:', error);
+            return false;
+        }
+    }
+
+    logout() {
+        this.clearSession();
+        console.log('✅ تم تسجيل الخروج');
+    }
+
+    isLoggedIn() {
+        if (!this.currentSession) {
             return false;
         }
         
-        if (data) {
-            localStorage.setItem('adminLoggedIn', 'true');
-            localStorage.setItem('adminLoginTime', new Date().toISOString());
-            localStorage.setItem('adminUsername', username);
-            return true;
+        // التحقق من انتهاء الجلسة (24 ساعة)
+        const loginDate = new Date(this.currentSession.loginTime);
+        const currentDate = new Date();
+        const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
+        
+        if (hoursDiff > 24) {
+            this.logout();
+            return false;
         }
-        return false;
-    } catch (error) {
-        console.error('Login error:', error);
-        return false;
+        
+        return this.currentSession.isLoggedIn === true;
+    }
+
+    clearSession() {
+        this.currentSession = null;
+        sessionStorage.removeItem(this.sessionKey);
+    }
+
+    generateToken() {
+        return 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    getSessionInfo() {
+        return this.currentSession;
     }
 }
 
-function supabaseLogoutAdmin() {
-    localStorage.removeItem('adminLoggedIn');
-    localStorage.removeItem('adminLoginTime');
-    localStorage.removeItem('adminUsername');
-}
-
-function supabaseIsAdminLoggedIn() {
-    const loggedIn = localStorage.getItem('adminLoggedIn');
-    const loginTime = localStorage.getItem('adminLoginTime');
-    
-    if (!loggedIn || !loginTime) {
-        return false;
-    }
-    
-    const loginDate = new Date(loginTime);
-    const currentDate = new Date();
-    const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
-    
-    if (hoursDiff > 24) {
-        supabaseLogoutAdmin();
-        return false;
-    }
-    
-    return true;
-}
+// إنشاء instance واحدة من AdminSession
+const adminSession = new AdminSession();
 
 // Helper functions
 async function supabaseFetchData(table, options = {}) {
@@ -128,10 +175,16 @@ async function supabaseDeleteData(table, id) {
 
 // Export functions
 window.supabase = supabaseClient;
-window.supabaseLoginAdmin = supabaseLoginAdmin;
-window.supabaseLogoutAdmin = supabaseLogoutAdmin;
-window.supabaseIsAdminLoggedIn = supabaseIsAdminLoggedIn;
+window.supabaseLoginAdmin = (username, password) => adminSession.login(username, password);
+window.supabaseLogoutAdmin = () => adminSession.logout();
+window.supabaseIsAdminLoggedIn = () => adminSession.isLoggedIn();
 window.supabaseFetchData = supabaseFetchData;
 window.supabaseInsertData = supabaseInsertData;
 window.supabaseUpdateData = supabaseUpdateData;
 window.supabaseDeleteData = supabaseDeleteData;
+
+// دالة لفحص حالة الجلسة
+window.checkAdminSession = () => {
+    console.log('🔐 فحص حالة الجلسة:', adminSession.getSessionInfo());
+    return adminSession.isLoggedIn();
+};
