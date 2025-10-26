@@ -1,25 +1,35 @@
-// نظام المصادقة المبسط والمباشر
-const ADMIN_CREDENTIALS = {
-    username: 'عاصم البيشي',
-    password: '0509894176'
-};
-
-// تسجيل الدخول - بدون Supabase
-function loginAdmin(username, password) {
-    console.log('محاولة تسجيل دخول:', username);
+// نظام المصادقة مع Supabase - الإصدار المعدل
+async function loginAdmin(username, password) {
+    console.log('🔐 محاولة تسجيل دخول:', username);
     
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-        localStorage.setItem('adminLoggedIn', 'true');
-        localStorage.setItem('adminLoginTime', new Date().toISOString());
-        localStorage.setItem('adminUsername', username);
-        console.log('✅ تسجيل الدخول ناجح');
-        return true;
+    try {
+        // استدعاء الدالة المخزنة في Supabase
+        const { data, error } = await supabase.rpc('verify_admin_password', {
+            p_username: username,
+            p_password: password
+        });
+
+        if (error) {
+            console.error('❌ خطأ في تسجيل الدخول:', error);
+            return false;
+        }
+        
+        if (data) {
+            localStorage.setItem('adminLoggedIn', 'true');
+            localStorage.setItem('adminLoginTime', new Date().toISOString());
+            localStorage.setItem('adminUsername', username);
+            console.log('✅ تسجيل الدخول ناجح');
+            return true;
+        } else {
+            console.log('❌ بيانات الدخول غير صحيحة');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ خطأ في الاتصال:', error);
+        return false;
     }
-    console.log('❌ تسجيل الدخول فاشل');
-    return false;
 }
 
-// تسجيل الخروج
 function logoutAdmin() {
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminLoginTime');
@@ -27,14 +37,14 @@ function logoutAdmin() {
     console.log('✅ تسجيل الخروج');
 }
 
-// التحقق من تسجيل الدخول
 function isAdminLoggedIn() {
     const loggedIn = localStorage.getItem('adminLoggedIn');
     const loginTime = localStorage.getItem('adminLoginTime');
     
-    console.log('فحص التسجيل:', { loggedIn, loginTime });
+    console.log('🔍 فحص التسجيل:', { loggedIn, loginTime });
     
     if (!loggedIn || loggedIn !== 'true') {
+        console.log('❌ غير مسجل دخول');
         return false;
     }
     
@@ -44,18 +54,19 @@ function isAdminLoggedIn() {
         const currentDate = new Date();
         const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
         
-        console.log('مدة الجلسة:', hoursDiff, 'ساعة');
+        console.log('⏰ مدة الجلسة:', hoursDiff.toFixed(2), 'ساعة');
         
         if (hoursDiff > 24) {
+            console.log('❌ انتهت مدة الجلسة');
             logoutAdmin();
             return false;
         }
     }
     
+    console.log('✅ مسجل دخول');
     return true;
 }
 
-// وقت الجلسة
 function getAdminSessionTime() {
     const loginTime = localStorage.getItem('adminLoginTime');
     if (!loginTime) return '0:00';
