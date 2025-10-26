@@ -1,9 +1,8 @@
 // الدوال العامة والمشتركة بين الصفحات
 
-// دالة لتحميل البيانات من Supabase
-async function loadFromStorage(key, defaultValue = null) {
+// دالة لتحميل البيانات من localStorage (للإعدادات المؤقتة)
+function loadFromStorage(key, defaultValue = null) {
     try {
-        // للتوافق مع الكود القديم، نستخدم localStorage مؤقتاً
         const item = localStorage.getItem(key);
         return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
