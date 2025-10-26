@@ -667,12 +667,53 @@ small {
     font-weight: bold;
 }
 
-.navigation-buttons {
+/* تحسينات أزرار التنقل */
+.test-navigation {
     display: flex;
     justify-content: space-between;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
+    margin-top: 30px;
+    padding-top: 25px;
+    border-top: 2px solid #e9ecef;
+    gap: 15px;
+}
+
+.test-navigation button {
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 120px;
+}
+
+.test-navigation button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+.test-navigation .btn-secondary {
+    background-color: var(--secondary);
+}
+
+.test-navigation .btn-primary {
+    background-color: var(--primary);
+}
+
+.test-navigation .btn-success {
+    background-color: var(--success);
+}
+
+/* تحسينات للجوال */
+@media (max-width: 768px) {
+    .test-navigation {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .test-navigation button {
+        width: 100%;
+        margin: 5px 0;
+    }
 }
 
 /* أنماط للتنبيهات */
@@ -778,27 +819,6 @@ small {
     margin-bottom: 25px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.15);
     border: none;
-}
-
-/* تحسين أزرار التنقل */
-.navigation-buttons {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 30px;
-    padding-top: 25px;
-    border-top: 2px solid #e9ecef;
-}
-
-.navigation-buttons button {
-    padding: 12px 30px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.navigation-buttons button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
 }
 
 /* تحسين عرض النتائج */
@@ -1029,4 +1049,39 @@ small {
 
 .question-feedback:nth-child(odd) {
     animation-delay: 0.2s;
+}
+
+/* تحسينات إضافية للرأس */
+.test-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.question-counter {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--secondary);
+    background: #f8f9fa;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid var(--secondary);
+}
+
+@media (max-width: 768px) {
+    .test-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .question-counter {
+        font-size: 1rem;
+        padding: 8px 15px;
+    }
 }
