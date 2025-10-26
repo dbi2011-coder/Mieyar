@@ -3,12 +3,12 @@ const SUPABASE_URL = 'https://eamerqxoxkhergjagxns.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbWVycXhveGtoZXJnamFneG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDkyNDUsImV4cCI6MjA3NjU4NTI0NX0.41VKtI7XhA0KkF1GdKhRDCrKCmHoIgUUQWiO_7MFwfM';
 
 // Create Supabase client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Authentication functions
-async function loginAdmin(username, password) {
+async function supabaseLoginAdmin(username, password) {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .rpc('verify_admin_password', {
                 p_username: username,
                 p_password: password
@@ -32,13 +32,13 @@ async function loginAdmin(username, password) {
     }
 }
 
-function logoutAdmin() {
+function supabaseLogoutAdmin() {
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminLoginTime');
     localStorage.removeItem('adminUsername');
 }
 
-function isAdminLoggedIn() {
+function supabaseIsAdminLoggedIn() {
     const loggedIn = localStorage.getItem('adminLoggedIn');
     const loginTime = localStorage.getItem('adminLoginTime');
     
@@ -51,7 +51,7 @@ function isAdminLoggedIn() {
     const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
     
     if (hoursDiff > 24) {
-        logoutAdmin();
+        supabaseLogoutAdmin();
         return false;
     }
     
@@ -59,9 +59,9 @@ function isAdminLoggedIn() {
 }
 
 // Helper functions
-async function fetchData(table, options = {}) {
+async function supabaseFetchData(table, options = {}) {
     try {
-        let query = supabase.from(table).select('*');
+        let query = supabaseClient.from(table).select('*');
         
         if (options.orderBy) {
             query = query.order(options.orderBy, { ascending: options.ascending || false });
@@ -81,9 +81,9 @@ async function fetchData(table, options = {}) {
     }
 }
 
-async function insertData(table, data) {
+async function supabaseInsertData(table, data) {
     try {
-        const { data: result, error } = await supabase
+        const { data: result, error } = await supabaseClient
             .from(table)
             .insert([data])
             .select();
@@ -96,9 +96,9 @@ async function insertData(table, data) {
     }
 }
 
-async function updateData(table, id, data) {
+async function supabaseUpdateData(table, id, data) {
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from(table)
             .update(data)
             .eq('id', id);
@@ -111,9 +111,9 @@ async function updateData(table, id, data) {
     }
 }
 
-async function deleteData(table, id) {
+async function supabaseDeleteData(table, id) {
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from(table)
             .delete()
             .eq('id', id);
@@ -127,11 +127,11 @@ async function deleteData(table, id) {
 }
 
 // Export functions
-window.supabase = supabase;
-window.loginAdmin = loginAdmin;
-window.logoutAdmin = logoutAdmin;
-window.isAdminLoggedIn = isAdminLoggedIn;
-window.fetchData = fetchData;
-window.insertData = insertData;
-window.updateData = updateData;
-window.deleteData = deleteData;
+window.supabase = supabaseClient;
+window.supabaseLoginAdmin = supabaseLoginAdmin;
+window.supabaseLogoutAdmin = supabaseLogoutAdmin;
+window.supabaseIsAdminLoggedIn = supabaseIsAdminLoggedIn;
+window.supabaseFetchData = supabaseFetchData;
+window.supabaseInsertData = supabaseInsertData;
+window.supabaseUpdateData = supabaseUpdateData;
+window.supabaseDeleteData = supabaseDeleteData;
