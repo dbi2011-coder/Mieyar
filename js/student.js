@@ -1,4 +1,4 @@
-// واجهة الطالب والاختبارات
+// واجهة الطالب والاختبارات مع Supabase
 
 let currentQuestionIndex = 0;
 let studentAnswers = [];
@@ -7,24 +7,35 @@ let timerInterval;
 let questions = [];
 let settings = {};
 
-function initStudent() {
-    loadSettings();
+async function initStudent() {
+    await loadSettings();
     showLoginInterface();
 }
 
-function loadSettings() {
-    settings = JSON.parse(localStorage.getItem('settings')) || {
-        questionsCount: 10,
-        loginType: 'open',
-        attemptsCount: 1,
-        resultsDisplay: 'show-answers'
-    };
-    
-    // تحديد واجهة الدخول المناسبة
-    if (settings.loginType === 'open') {
-        document.getElementById('open-login').style.display = 'block';
-    } else {
-        document.getElementById('restricted-login').style.display = 'block';
+async function loadSettings() {
+    try {
+        const { data, error } = await supabase.rpc('get_settings');
+        
+        if (error) throw error;
+        
+        settings = data || {
+            questionsCount: 10,
+            loginType: 'open',
+            attemptsCount: 1,
+            resultsDisplay: 'show-answers'
+        };
+        
+        showLoginInterface();
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        // استخدام إعدادات افتراضية في حالة الخطأ
+        settings = {
+            questionsCount: 10,
+            loginType: 'open',
+            attemptsCount: 1,
+            resultsDisplay: 'show-answers'
+        };
+        showLoginInterface();
     }
 }
 
@@ -35,7 +46,7 @@ function showLoginInterface() {
     document.getElementById('results-container').style.display = 'none';
 }
 
-function validateRestrictedLogin() {
+async function validateRestrictedLogin() {
     const studentId = document.getElementById('student-id-input').value.trim();
     const studentName = document.getElementById('student-name-input').value.trim();
     
@@ -44,24 +55,43 @@ function validateRestrictedLogin() {
         return;
     }
     
-    const authorizedStudents = JSON.parse(localStorage.getItem('authorizedStudents')) || [];
-    const student = authorizedStudents.find(s => s.id === studentId && s.name === studentName);
-    
-    if (!student) {
-        alert('رقم الهوية/الإقامة أو اسم الطالب غير صحيح');
-        return;
+    try {
+        const { data, error } = await supabase
+            .from('authorized_students')
+            .select('*')
+            .eq('student_id', studentId)
+            .eq('student_name', studentName)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                alert('رقم الهوية/الإقامة أو اسم الطالب غير صحيح');
+            } else {
+                throw error;
+            }
+            return;
+        }
+        
+        if (data) {
+            if (data.used_attempts >= data.max_attempts) {
+                alert('لقد استنفذت عدد المحاولات المسموحة');
+                return;
+            }
+            
+            // تحديث عدد المحاولات المستخدمة
+            await supabase
+                .from('authorized_students')
+                .update({ 
+                    used_attempts: (data.used_attempts || 0) + 1 
+                })
+                .eq('id', data.id);
+            
+            startTest(studentName);
+        }
+    } catch (error) {
+        console.error('Login validation error:', error);
+        alert('حدث خطأ في التحقق من البيانات');
     }
-    
-    if (student.usedAttempts >= settings.attemptsCount) {
-        alert('لقد استنفذت عدد المحاولات المسموحة');
-        return;
-    }
-    
-    // تحديث عدد المحاولات المستخدمة
-    student.usedAttempts = (student.usedAttempts || 0) + 1;
-    localStorage.setItem('authorizedStudents', JSON.stringify(authorizedStudents));
-    
-    startTest(studentName);
 }
 
 function startTest(studentName) {
@@ -69,54 +99,64 @@ function startTest(studentName) {
     document.getElementById('restricted-login').style.display = 'none';
     document.getElementById('test-container').style.display = 'block';
     
-    // تحميل الأسئلة وعرضها
     loadQuestionsForTest();
     displayCurrentQuestion();
     
-    // بدء المؤقت
     startTime = new Date();
     startTimer();
     
-    // حفظ اسم الطالب
     localStorage.setItem('currentStudent', studentName);
 }
 
-function loadQuestionsForTest() {
-    const allQuestions = JSON.parse(localStorage.getItem('questions')) || [];
-    
-    if (allQuestions.length === 0) {
-        alert('لا توجد أسئلة متاحة للاختبار');
-        showLoginInterface();
-        return;
-    }
-    
-    // تحويل أسئلة الاستيعاب إلى أسئلة فردية
-    const flattenedQuestions = [];
-    allQuestions.forEach(question => {
-        if (question.type === 'reading-comprehension' && question.passageQuestions) {
-            // إضافة كل سؤال من أسئلة القطعة كسؤال منفصل
-            question.passageQuestions.forEach(passageQ => {
-                flattenedQuestions.push({
-                    id: passageQ.id,
-                    text: passageQ.text,
-                    type: 'reading-comprehension-item',
-                    options: passageQ.options,
-                    correctAnswer: passageQ.correctAnswer,
-                    readingPassage: question.readingPassage,
-                    parentQuestionId: question.id
-                });
-            });
-        } else {
-            flattenedQuestions.push(question);
+async function loadQuestionsForTest() {
+    try {
+        const allQuestions = await fetchData('questions');
+        
+        if (allQuestions.length === 0) {
+            alert('لا توجد أسئلة متاحة للاختبار');
+            showLoginInterface();
+            return;
         }
-    });
-    
-    // اختيار عدد عشوائي من الأسئلة
-    const questionsCount = Math.min(settings.questionsCount, flattenedQuestions.length);
-    questions = getRandomQuestions(flattenedQuestions, questionsCount);
-    
-    // تهيئة الإجابات
-    studentAnswers = new Array(questions.length).fill(null);
+        
+        // تحويل أسئلة الاستيعاب إلى أسئلة فردية
+        const flattenedQuestions = [];
+        allQuestions.forEach(question => {
+            if (question.question_type === 'reading-comprehension' && question.passage_questions) {
+                question.passage_questions.forEach(passageQ => {
+                    flattenedQuestions.push({
+                        id: passageQ.id,
+                        text: passageQ.text,
+                        type: 'reading-comprehension-item',
+                        options: passageQ.options,
+                        correctAnswer: passageQ.correctAnswer,
+                        readingPassage: question.reading_passage,
+                        parentQuestionId: question.id
+                    });
+                });
+            } else {
+                flattenedQuestions.push({
+                    id: question.id,
+                    text: question.question_text,
+                    type: question.question_type,
+                    options: question.options,
+                    correctAnswer: question.correct_answer,
+                    mediaUrl: question.media_url
+                });
+            }
+        });
+        
+        // اختيار عدد عشوائي من الأسئلة
+        const questionsCount = Math.min(settings.questionsCount, flattenedQuestions.length);
+        questions = getRandomQuestions(flattenedQuestions, questionsCount);
+        
+        // تهيئة الإجابات
+        studentAnswers = new Array(questions.length).fill(null);
+        
+    } catch (error) {
+        console.error('Error loading questions for test:', error);
+        alert('حدث خطأ في تحميل الأسئلة');
+        showLoginInterface();
+    }
 }
 
 function getRandomQuestions(allQuestions, count) {
@@ -157,7 +197,7 @@ function displayCurrentQuestion() {
             <div class="media-attachment">
                 ${isYouTubeUrl(question.mediaUrl) ? 
                     `<iframe src="${getYouTubeEmbedUrl(question.mediaUrl)}" frameborder="0" allowfullscreen></iframe>` :
-                    `<img src="${question.mediaUrl}" alt="مرفق السؤال">`
+                    `<img src="${question.mediaUrl}" alt="مرفق السؤال" onerror="this.style.display='none'">`
                 }
             </div>
         `;
@@ -228,7 +268,7 @@ function updateTimer() {
         `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function submitTest() {
+async function submitTest() {
     clearInterval(timerInterval);
     
     const endTime = new Date();
@@ -240,21 +280,25 @@ function submitTest() {
     
     // حفظ نتيجة الطالب
     const studentName = localStorage.getItem('currentStudent');
-    const students = JSON.parse(localStorage.getItem('students')) || [];
     
-    students.push({
-        name: studentName,
-        score: score,
-        total: questions.length,
-        percentage: percentage,
-        timeTaken: timeTaken,
-        date: new Date().toLocaleDateString('ar-SA')
-    });
-    
-    localStorage.setItem('students', JSON.stringify(students));
-    
-    // عرض النتائج
-    showResults(score, percentage, timeTaken);
+    try {
+        await insertData('student_results', {
+            student_name: studentName,
+            score: score,
+            total_questions: questions.length,
+            percentage: percentage,
+            time_taken: timeTaken,
+            answers: studentAnswers
+        });
+        
+        // عرض النتائج
+        showResults(score, percentage, timeTaken);
+        
+    } catch (error) {
+        console.error('Error saving student result:', error);
+        alert('حدث خطأ في حفظ النتيجة، لكن يمكنك عرض النتائج الآن');
+        showResults(score, percentage, timeTaken);
+    }
 }
 
 function calculateScore() {
@@ -294,9 +338,11 @@ function showResults(score, percentage, timeTaken) {
                 ${questions.map((question, index) => {
                     const studentAnswer = studentAnswers[index];
                     const isCorrect = studentAnswer === question.correctAnswer;
+                    const studentAnswerText = studentAnswer ? question.options[studentAnswer - 1] : 'لم تجب';
+                    const correctAnswerText = question.options[question.correctAnswer - 1];
                     
                     return `
-                        <div class="question-feedback ${isCorrect ? 'correct' : 'incorrect'}">
+                        <div class="question-feedback">
                             <h4>السؤال ${index + 1}</h4>
                             ${question.readingPassage ? `
                                 <div class="reading-passage">
@@ -305,9 +351,9 @@ function showResults(score, percentage, timeTaken) {
                                 </div>
                             ` : ''}
                             <p><strong>النص:</strong> ${question.text}</p>
-                            <p><strong>إجابتك:</strong> ${studentAnswer ? question.options[studentAnswer - 1] : 'لم تجب'}</p>
-                            <p><strong>الإجابة الصحيحة:</strong> ${question.options[question.correctAnswer - 1]}</p>
-                            <p class="result ${isCorrect ? 'correct-text' : 'incorrect-text'}">
+                            <p><strong>إجابتك:</strong> ${studentAnswerText}</p>
+                            <p><strong>الإجابة الصحيحة:</strong> ${correctAnswerText}</p>
+                            <p class="${isCorrect ? 'correct-text' : 'incorrect-text'}">
                                 ${isCorrect ? '✓ إجابة صحيحة' : '✗ إجابة خاطئة'}
                             </p>
                         </div>
@@ -326,10 +372,11 @@ function showResults(score, percentage, timeTaken) {
 }
 
 function isYouTubeUrl(url) {
-    return url.includes('youtube.com') || url.includes('youtu.be');
+    return url && (url.includes('youtube.com') || url.includes('youtu.be'));
 }
 
 function getYouTubeEmbedUrl(url) {
+    if (!url) return '';
     const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
     return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : url;
 }
