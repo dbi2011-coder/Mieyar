@@ -605,7 +605,7 @@ async function deleteSelectedStudents() {
         }
         
         await loadReports();
-        showAlert(`تم حذف ${successCount} طالب بنجاح`, 'success');
+        showAlert(`تم حذف ${successCount} طالب بنجاح', 'success`);
     }
 }
 
@@ -620,7 +620,7 @@ async function deleteAllStudents() {
         }
         
         await loadReports();
-        showAlert(`تم حذف ${successCount} طالب بنجاح`, 'success');
+        showAlert(`تم حذف ${successCount} طالب بنجاح', 'success`);
     }
 }
 
@@ -630,42 +630,31 @@ function printReport() {
 
 async function loadSettings() {
     try {
-        console.log('📥 جاري تحميل الإعدادات من Supabase...');
+        console.log('📥 جاري تحميل الإعدادات...');
         
         const { data, error } = await supabase
             .from('settings')
-            .select('*')
+            .select('setting_value')
             .eq('setting_key', 'test_settings')
             .single();
 
         if (error) {
-            console.error('❌ خطأ في تحميل الإعدادات:', error);
-            // استخدام إعدادات افتراضية في حالة الخطأ
+            console.log('ℹ️ استخدام الإعدادات الافتراضية');
             settings = {
                 questionsCount: 10,
                 loginType: 'open',
                 attemptsCount: 1,
                 resultsDisplay: 'show-answers'
             };
-        } else if (data) {
-            console.log('✅ تم تحميل الإعدادات:', data.setting_value);
-            settings = data.setting_value;
         } else {
-            // إذا لم توجد إعدادات، استخدام الافتراضية
-            console.log('ℹ️ لا توجد إعدادات محفوظة، استخدام الإعدادات الافتراضية');
-            settings = {
-                questionsCount: 10,
-                loginType: 'open',
-                attemptsCount: 1,
-                resultsDisplay: 'show-answers'
-            };
+            console.log('✅ الإعدادات المحملة:', data.setting_value);
+            settings = data.setting_value;
         }
         
         updateSettingsForm();
         
     } catch (error) {
-        console.error('❌ خطأ غير متوقع في تحميل الإعدادات:', error);
-        // استخدام إعدادات افتراضية في حالة الخطأ
+        console.error('❌ خطأ:', error);
         settings = {
             questionsCount: 10,
             loginType: 'open',
@@ -702,7 +691,6 @@ function updateSettingsForm() {
 }
 
 async function saveSettings() {
-    // جمع البيانات من النموذج
     settings = {
         questionsCount: parseInt(document.getElementById('questions-count').value),
         loginType: document.getElementById('login-type').value,
@@ -710,33 +698,24 @@ async function saveSettings() {
         resultsDisplay: document.getElementById('results-display').value
     };
     
-    console.log('💾 محاولة حفظ الإعدادات:', settings);
+    console.log('💾 حفظ الإعدادات:', settings);
     
     try {
-        // استخدام upsert لحفظ الإعدادات
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('settings')
-            .upsert([
-                {
-                    setting_key: 'test_settings',
-                    setting_value: settings,
-                    updated_at: new Date().toISOString()
-                }
-            ], {
-                onConflict: 'setting_key'
-            });
+            .update({ 
+                setting_value: settings,
+                updated_at: new Date().toISOString()
+            })
+            .eq('setting_key', 'test_settings');
 
-        if (error) {
-            console.error('❌ خطأ في حفظ الإعدادات:', error);
-            throw error;
-        }
+        if (error) throw error;
         
-        console.log('✅ تم حفظ الإعدادات بنجاح:', data);
         showAlert('تم حفظ الإعدادات بنجاح', 'success');
         
     } catch (error) {
-        console.error('❌ خطأ في حفظ الإعدادات:', error);
-        showAlert('خطأ في حفظ الإعدادات: ' + error.message, 'error');
+        console.error('❌ خطأ:', error);
+        showAlert('خطأ في حفظ الإعدادات', 'error');
     }
 }
 
