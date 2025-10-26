@@ -8,15 +8,24 @@ let questions = [];
 let settings = {};
 
 async function initStudent() {
+    console.log('بدء تهيئة واجهة الطالب...');
     await loadSettings();
-    showLoginInterface();
+    setupEventListeners();
+}
+
+function setupEventListeners() {
+    console.log('إعداد مستمعي الأحداث...');
 }
 
 async function loadSettings() {
     try {
+        console.log('جاري تحميل الإعدادات...');
         const { data, error } = await window.supabase.rpc('get_settings');
         
-        if (error) throw error;
+        if (error) {
+            console.error('خطأ في تحميل الإعدادات:', error);
+            throw error;
+        }
         
         settings = data || {
             questionsCount: 10,
@@ -25,7 +34,9 @@ async function loadSettings() {
             resultsDisplay: 'show-answers'
         };
         
+        console.log('الإعدادات المحملة:', settings);
         showLoginInterface();
+        
     } catch (error) {
         console.error('Error loading settings:', error);
         // استخدام إعدادات افتراضية في حالة الخطأ
@@ -40,10 +51,16 @@ async function loadSettings() {
 }
 
 function showLoginInterface() {
-    document.getElementById('open-login').style.display = settings.loginType === 'open' ? 'block' : 'none';
-    document.getElementById('restricted-login').style.display = settings.loginType === 'restricted' ? 'block' : 'none';
-    document.getElementById('test-container').style.display = 'none';
-    document.getElementById('results-container').style.display = 'none';
+    console.log('عرض واجهة الدخول...');
+    const openLogin = document.getElementById('open-login');
+    const restrictedLogin = document.getElementById('restricted-login');
+    const testContainer = document.getElementById('test-container');
+    const resultsContainer = document.getElementById('results-container');
+    
+    if (openLogin) openLogin.style.display = settings.loginType === 'open' ? 'block' : 'none';
+    if (restrictedLogin) restrictedLogin.style.display = settings.loginType === 'restricted' ? 'block' : 'none';
+    if (testContainer) testContainer.style.display = 'none';
+    if (resultsContainer) resultsContainer.style.display = 'none';
 }
 
 async function validateRestrictedLogin() {
@@ -56,6 +73,7 @@ async function validateRestrictedLogin() {
     }
     
     try {
+        console.log('التحقق من بيانات الطالب...');
         const { data, error } = await window.supabase
             .from('authorized_students')
             .select('*')
@@ -94,39 +112,44 @@ async function validateRestrictedLogin() {
     }
 }
 
-function startTest(studentName) {
+async function startTest(studentName) {
+    console.log('بدء الاختبار للطالب:', studentName);
+    
+    // إخفاء واجهات الدخول
     document.getElementById('open-login').style.display = 'none';
     document.getElementById('restricted-login').style.display = 'none';
+    
+    // إظهار واجهة الاختبار
     document.getElementById('test-container').style.display = 'block';
     
-    // تحميل الأسئلة وعرضها
-    loadQuestionsForTest().then(() => {
-        displayCurrentQuestion();
-        
-        // بدء المؤقت بعد تحميل الأسئلة
-        startTime = new Date();
-        startTimer();
-        
-        // حفظ اسم الطالب
-        localStorage.setItem('currentStudent', studentName);
-    }).catch(error => {
-        console.error('Error starting test:', error);
-        alert('حدث خطأ في بدء الاختبار');
-        showLoginInterface();
-    });
+    // تحميل الأسئلة
+    await loadQuestionsForTest();
+    
+    // عرض السؤال الأول
+    displayCurrentQuestion();
+    
+    // بدء المؤقت
+    startTime = new Date();
+    startTimer();
+    
+    // حفظ اسم الطالب
+    localStorage.setItem('currentStudent', studentName);
+    
+    console.log('الاختبار بدأ بنجاح');
 }
 
 async function loadQuestionsForTest() {
     try {
+        console.log('جاري تحميل الأسئلة...');
         const allQuestions = await window.supabaseFetchData('questions');
+        
+        console.log('عدد الأسئلة المحملة من قاعدة البيانات:', allQuestions.length);
         
         if (allQuestions.length === 0) {
             alert('لا توجد أسئلة متاحة للاختبار');
             showLoginInterface();
             return;
         }
-        
-        console.log('عدد الأسئلة المحملة:', allQuestions.length); // للتdebug
         
         // تحويل أسئلة الاستيعاب إلى أسئلة فردية
         const flattenedQuestions = [];
@@ -157,13 +180,13 @@ async function loadQuestionsForTest() {
             }
         });
         
-        console.log('الأسئلة بعد التحويل:', flattenedQuestions); // للتdebug
+        console.log('الأسئلة بعد التحويل:', flattenedQuestions.length);
         
         // اختيار عدد عشوائي من الأسئلة
         const questionsCount = Math.min(settings.questionsCount || 10, flattenedQuestions.length);
         questions = getRandomQuestions(flattenedQuestions, questionsCount);
         
-        console.log('الأسئلة المختارة للاختبار:', questions); // للتdebug
+        console.log('الأسئلة المختارة للاختبار:', questions.length);
         
         // تهيئة الإجابات
         studentAnswers = new Array(questions.length).fill(null);
@@ -171,7 +194,7 @@ async function loadQuestionsForTest() {
     } catch (error) {
         console.error('Error loading questions for test:', error);
         alert('حدث خطأ في تحميل الأسئلة');
-        throw error;
+        showLoginInterface();
     }
 }
 
@@ -200,7 +223,7 @@ function displayCurrentQuestion() {
     
     const question = questions[currentQuestionIndex];
     
-    console.log('عرض السؤال:', question); // للتdebug
+    console.log('عرض السؤال:', currentQuestionIndex + 1, question);
     
     container.innerHTML = '';
     
@@ -208,7 +231,9 @@ function displayCurrentQuestion() {
     questionDiv.className = 'question-container';
     
     let questionHTML = `
-        <h3>السؤال ${currentQuestionIndex + 1} من ${questions.length}</h3>
+        <div class="question-header">
+            <h3>السؤال ${currentQuestionIndex + 1} من ${questions.length}</h3>
+        </div>
     `;
     
     // إضافة قطعة الاستيعاب إذا كان السؤال من نوع استيعاب مقروء
@@ -216,13 +241,16 @@ function displayCurrentQuestion() {
         questionHTML += `
             <div class="reading-passage">
                 <h4>اقرأ القطعة التالية ثم أجب عن السؤال:</h4>
-                <div class="passage-content">${question.readingPassage}</div>
+                <div class="passage-content" style="max-width: 100%; overflow-wrap: break-word; word-break: break-word; box-sizing: border-box;">
+                    ${question.readingPassage}
+                </div>
             </div>
         `;
     }
     
     questionHTML += `
-        <p class="question-text"><strong>${question.text}</strong></p>
+        <div class="question-content">
+            <p class="question-text">${question.text}</p>
     `;
     
     // إضافة المرفق إذا كان النوع يحتوي على مرفق
@@ -252,20 +280,19 @@ function displayCurrentQuestion() {
             </div>
         `;
     } else {
-        questionHTML += `<p>لا توجد خيارات متاحة لهذا السؤال</p>`;
+        questionHTML += `<p class="no-options">لا توجد خيارات متاحة لهذا السؤال</p>`;
     }
+    
+    questionHTML += `</div>`;
     
     questionDiv.innerHTML = questionHTML;
     container.appendChild(questionDiv);
     
-    // إضافة أزرار التنقل
-    const navigationDiv = document.createElement('div');
-    navigationDiv.className = 'navigation-buttons';
-    navigationDiv.innerHTML = `
-        <button class="btn-secondary" onclick="previousQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>السابق</button>
-        <button class="btn-primary" onclick="nextQuestion()">${currentQuestionIndex === questions.length - 1 ? 'إنهاء الاختبار' : 'التالي'}</button>
-    `;
-    container.appendChild(navigationDiv);
+    // تحديث عداد الأسئلة
+    updateQuestionCounter();
+    
+    // تحديث أزرار التنقل
+    updateNavigationButtons();
     
     // إضافة مستمعي الأحداث للخيارات
     if (question.options && question.options.length > 0) {
@@ -274,10 +301,33 @@ function displayCurrentQuestion() {
             if (radioBtn) {
                 radioBtn.addEventListener('change', function() {
                     studentAnswers[currentQuestionIndex] = parseInt(this.value);
-                    console.log('تم اختيار الإجابة:', studentAnswers[currentQuestionIndex]); // للتdebug
+                    console.log('تم اختيار الإجابة:', studentAnswers[currentQuestionIndex]);
                 });
             }
         });
+    }
+}
+
+function updateQuestionCounter() {
+    const counter = document.getElementById('question-counter');
+    if (counter) {
+        counter.textContent = `السؤال ${currentQuestionIndex + 1} من ${questions.length}`;
+    }
+}
+
+function updateNavigationButtons() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentQuestionIndex === 0;
+    }
+    
+    if (nextBtn && submitBtn) {
+        const isLastQuestion = currentQuestionIndex === questions.length - 1;
+        nextBtn.style.display = isLastQuestion ? 'none' : 'block';
+        submitBtn.style.display = isLastQuestion ? 'block' : 'none';
     }
 }
 
@@ -344,7 +394,7 @@ async function submitTest() {
     const score = calculateScore();
     const percentage = Math.round((score / questions.length) * 100);
     
-    console.log('النتيجة:', { score, percentage, timeTaken, answers: studentAnswers }); // للتdebug
+    console.log('النتيجة:', { score, percentage, timeTaken, answers: studentAnswers });
     
     // حفظ نتيجة الطالب
     const studentName = localStorage.getItem('currentStudent');
@@ -424,7 +474,9 @@ function showResults(score, percentage, timeTaken) {
                             ${question.readingPassage ? `
                                 <div class="reading-passage">
                                     <strong>قطعة الاستيعاب:</strong>
-                                    <div class="passage-content">${question.readingPassage}</div>
+                                    <div class="passage-content" style="max-width: 100%; overflow-wrap: break-word; word-break: break-word; box-sizing: border-box;">
+                                        ${question.readingPassage}
+                                    </div>
                                 </div>
                             ` : ''}
                             <p><strong>النص:</strong> ${question.text}</p>
