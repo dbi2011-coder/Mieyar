@@ -1,21 +1,15 @@
-// إدارة الأسئلة والإعدادات للمسؤول
+// إدارة الأسئلة والإعدادات للمسؤول مع Supabase
 
-let questions = JSON.parse(localStorage.getItem('questions')) || [];
-let authorizedStudents = JSON.parse(localStorage.getItem('authorizedStudents')) || [];
-let settings = JSON.parse(localStorage.getItem('settings')) || {
-    questionsCount: 10,
-    loginType: 'open',
-    attemptsCount: 1,
-    resultsDisplay: 'show-answers'
-};
-
+let questions = [];
+let authorizedStudents = [];
+let settings = {};
 let readingQuestions = [];
 
-function initAdmin() {
-    loadQuestions();
-    loadReports();
-    loadSettings();
-    loadAuthorizedStudents();
+async function initAdmin() {
+    await loadQuestions();
+    await loadReports();
+    await loadSettings();
+    await loadAuthorizedStudents();
     setupEventListeners();
 }
 
@@ -75,14 +69,12 @@ function handleQuestionTypeChange(type) {
     const standardOptionsSection = document.getElementById('standard-options-section');
     const standardQuestionGroup = document.getElementById('standard-question-group');
     
-    // إظهار/إخفاء العناصر حسب نوع السؤال
     mediaGroup.style.display = type === 'multiple-with-media' ? 'block' : 'none';
     readingGroup.style.display = type === 'reading-comprehension' ? 'block' : 'none';
     readingQuestionsContainer.style.display = type === 'reading-comprehension' ? 'block' : 'none';
     standardOptionsSection.style.display = type === 'reading-comprehension' ? 'none' : 'block';
     standardQuestionGroup.style.display = type === 'reading-comprehension' ? 'none' : 'block';
     
-    // إدارة السمات required بناءً على الحقول المرئية
     updateRequiredAttributes(type);
     
     if (type === 'reading-comprehension') {
@@ -93,17 +85,14 @@ function handleQuestionTypeChange(type) {
     }
 }
 
-// دالة جديدة لإدارة السمات required
 function updateRequiredAttributes(questionType) {
     const questionText = document.getElementById('question-text');
     const readingPassage = document.getElementById('reading-passage');
     
     if (questionType === 'reading-comprehension') {
-        // إزالة required من حقول الأسئلة العادية
         questionText.required = false;
         readingPassage.required = true;
         
-        // إزالة required من الخيارات العادية
         document.querySelectorAll('.option-input').forEach(input => {
             input.required = false;
         });
@@ -111,16 +100,12 @@ function updateRequiredAttributes(questionType) {
             radio.required = false;
         });
     } else {
-        // إعادة required للحقول المرئية
         questionText.required = true;
         readingPassage.required = false;
-        
-        // إضافة required للخيارات المرئية
         updateOptionsRequiredAttributes();
     }
 }
 
-// دالة جديدة لتحديث السمات required للخيارات
 function updateOptionsRequiredAttributes() {
     const optionInputs = document.querySelectorAll('.option-input');
     const correctAnswerRadios = document.querySelectorAll('input[name="correct-answer"]');
@@ -135,17 +120,14 @@ function updateOptionsRequiredAttributes() {
 }
 
 function switchTab(tabId) {
-    // إخفاء جميع المحتويات
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
     
-    // إلغاء تنشيط جميع الأزرار
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    // إظهار المحتوى المحدد
     document.getElementById(tabId).classList.add('active');
     document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
 }
@@ -176,7 +158,6 @@ function updateOptionsContainer() {
         correctAnswerContainer.appendChild(radioDiv);
     }
     
-    // تحديث السمات required بناءً على نوع السؤال الحالي
     const currentType = document.getElementById('question-type').value;
     updateRequiredAttributes(currentType);
 }
@@ -215,7 +196,6 @@ function addReadingQuestion() {
     
     document.getElementById('reading-questions-list').appendChild(questionDiv);
     
-    // تحديث الخيارات لهذا السؤال
     const optionsCountSelect = questionDiv.querySelector('.reading-options-count');
     optionsCountSelect.addEventListener('change', function() {
         updateReadingQuestionOptions(questionId);
@@ -266,7 +246,6 @@ function loadReadingQuestions() {
     readingQuestions = [];
 }
 
-// دالة جديدة للتحقق من صحة النموذج
 function validateQuestionForm() {
     const questionType = document.getElementById('question-type').value;
     
@@ -307,10 +286,9 @@ function validateQuestionForm() {
     return true;
 }
 
-function addQuestion(e) {
+async function addQuestion(e) {
     e.preventDefault();
     
-    // التحقق اليدوي من الصحة بدلاً من الاعتماد على المتصفح
     if (!validateQuestionForm()) {
         return;
     }
@@ -320,7 +298,6 @@ function addQuestion(e) {
     let question;
     
     if (questionType === 'reading-comprehension') {
-        // معالجة أسئلة الاستيعاب المقروء
         const readingPassage = document.getElementById('reading-passage').value.trim();
         
         if (!readingPassage) {
@@ -328,7 +305,6 @@ function addQuestion(e) {
             return;
         }
         
-        // جمع أسئلة القطعة
         const readingQuestionElements = document.querySelectorAll('.reading-question-container');
         if (readingQuestionElements.length === 0) {
             alert('يرجى إضافة أسئلة للقطعة');
@@ -338,7 +314,6 @@ function addQuestion(e) {
         const passageQuestions = [];
         let hasError = false;
         
-        // التحقق من جميع الأسئلة أولاً
         for (let i = 0; i < readingQuestionElements.length; i++) {
             const questionDiv = readingQuestionElements[i];
             const questionId = questionDiv.getAttribute('data-id');
@@ -346,21 +321,18 @@ function addQuestion(e) {
             const optionsCount = parseInt(questionDiv.querySelector('.reading-options-count').value);
             const correctAnswer = questionDiv.querySelector(`input[name="reading-correct-${questionId}"]:checked`);
             
-            // التحقق من نص السؤال
             if (!questionText) {
                 alert(`يرجى إدخال نص السؤال رقم ${i + 1}`);
                 hasError = true;
                 break;
             }
             
-            // التحقق من الإجابة الصحيحة
             if (!correctAnswer) {
                 alert(`يرجى اختيار الإجابة الصحيحة للسؤال رقم ${i + 1}`);
                 hasError = true;
                 break;
             }
             
-            // جمع الخيارات والتحقق منها
             const options = [];
             for (let j = 1; j <= optionsCount; j++) {
                 const optionInput = questionDiv.querySelector(`.reading-option-input[data-option="${j}"]`);
@@ -374,7 +346,6 @@ function addQuestion(e) {
             
             if (hasError) break;
             
-            // إضافة السؤال إلى القائمة
             passageQuestions.push({
                 id: questionId,
                 text: questionText,
@@ -386,15 +357,13 @@ function addQuestion(e) {
         if (hasError) return;
         
         question = {
-            id: Date.now(),
-            text: "قطعة استيعاب مقروء",
-            type: questionType,
-            readingPassage: readingPassage,
-            passageQuestions: passageQuestions
+            question_text: "قطعة استيعاب مقروء",
+            question_type: questionType,
+            reading_passage: readingPassage,
+            passage_questions: passageQuestions
         };
         
     } else {
-        // الأسئلة العادية
         const questionText = document.getElementById('question-text').value.trim();
         const optionsCount = parseInt(document.getElementById('options-count').value);
         const correctAnswer = document.querySelector('input[name="correct-answer"]:checked');
@@ -420,23 +389,26 @@ function addQuestion(e) {
         }
         
         question = {
-            id: Date.now(),
-            text: questionText,
-            type: questionType,
+            question_text: questionText,
+            question_type: questionType,
             options: options,
-            correctAnswer: parseInt(correctAnswer.value),
-            mediaUrl: questionType === 'multiple-with-media' ? document.getElementById('media-url').value : null
+            correct_answer: parseInt(correctAnswer.value),
+            media_url: questionType === 'multiple-with-media' ? document.getElementById('media-url').value : null
         };
     }
     
-    questions.push(question);
-    saveQuestions();
-    loadQuestions();
-    
-    // إعادة تعيين النموذج
-    resetQuestionForm();
-    
-    alert('تم إضافة السؤال بنجاح');
+    try {
+        const result = await insertData('questions', question);
+        if (result) {
+            questions.push(result);
+            await loadQuestions();
+            resetQuestionForm();
+            showAlert('تم إضافة السؤال بنجاح', 'success');
+        }
+    } catch (error) {
+        console.error('Error adding question:', error);
+        showAlert('خطأ في إضافة السؤال', 'error');
+    }
 }
 
 function resetQuestionForm() {
@@ -449,12 +421,19 @@ function resetQuestionForm() {
     document.getElementById('question-type').value = 'multiple';
     updateOptionsContainer();
     document.getElementById('reading-questions-list').innerHTML = '';
-    
-    // تحديث السمات required
     updateRequiredAttributes('multiple');
 }
 
-function loadQuestions() {
+async function loadQuestions() {
+    try {
+        questions = await fetchData('questions', { orderBy: 'created_at' });
+        renderQuestions();
+    } catch (error) {
+        console.error('Error loading questions:', error);
+    }
+}
+
+function renderQuestions() {
     const container = document.getElementById('questions-list');
     container.innerHTML = '';
     
@@ -468,20 +447,20 @@ function loadQuestions() {
         questionDiv.className = 'question-container';
         
         let questionHTML = `
-            <h4>السؤال ${index + 1} - ${getQuestionTypeText(question.type)}</h4>
+            <h4>السؤال ${index + 1} - ${getQuestionTypeText(question.question_type)}</h4>
         `;
         
-        if (question.type === 'reading-comprehension') {
+        if (question.question_type === 'reading-comprehension') {
             questionHTML += `
                 <div class="reading-passage">
                     <h5>قطعة الاستيعاب:</h5>
-                    <div class="passage-content">${question.readingPassage}</div>
+                    <div class="passage-content">${question.reading_passage}</div>
                 </div>
-                <p><strong>عدد الأسئلة:</strong> ${question.passageQuestions.length}</p>
+                <p><strong>عدد الأسئلة:</strong> ${question.passage_questions.length}</p>
                 <div class="passage-questions">
             `;
             
-            question.passageQuestions.forEach((q, qIndex) => {
+            question.passage_questions.forEach((q, qIndex) => {
                 questionHTML += `
                     <div class="passage-question">
                         <strong>سؤال ${qIndex + 1}:</strong> ${q.text}
@@ -507,13 +486,13 @@ function loadQuestions() {
             questionHTML += `</div>`;
         } else {
             questionHTML += `
-                <p><strong>النص:</strong> ${question.text}</p>
-                ${question.mediaUrl ? `<p><strong>المرفق:</strong> ${question.mediaUrl}</p>` : ''}
+                <p><strong>النص:</strong> ${question.question_text}</p>
+                ${question.media_url ? `<p><strong>المرفق:</strong> ${question.media_url}</p>` : ''}
                 <p><strong>الخيارات:</strong></p>
                 <ul>
                     ${question.options.map((option, i) => `
-                        <li class="${i + 1 === question.correctAnswer ? 'correct-answer' : ''}">
-                            ${option} ${i + 1 === question.correctAnswer ? '✓' : ''}
+                        <li class="${i + 1 === question.correct_answer ? 'correct-answer' : ''}">
+                            ${option} ${i + 1 === question.correct_answer ? '✓' : ''}
                         </li>
                     `).join('')}
                 </ul>
@@ -521,7 +500,7 @@ function loadQuestions() {
         }
         
         questionHTML += `
-            <button class="btn-danger btn-small" onclick="deleteQuestion(${question.id})">حذف</button>
+            <button class="btn-danger btn-small" onclick="deleteQuestion('${question.id}')">حذف</button>
         `;
         
         questionDiv.innerHTML = questionHTML;
@@ -538,21 +517,29 @@ function getQuestionTypeText(type) {
     return types[type] || type;
 }
 
-function deleteQuestion(id) {
+async function deleteQuestion(id) {
     if (confirm('هل أنت متأكد من حذف هذا السؤال؟')) {
-        questions = questions.filter(q => q.id !== id);
-        saveQuestions();
-        loadQuestions();
+        const success = await deleteData('questions', id);
+        if (success) {
+            questions = questions.filter(q => q.id !== id);
+            renderQuestions();
+            showAlert('تم حذف السؤال بنجاح', 'success');
+        } else {
+            showAlert('خطأ في حذف السؤال', 'error');
+        }
     }
 }
 
-function saveQuestions() {
-    localStorage.setItem('questions', JSON.stringify(questions));
+async function loadReports() {
+    try {
+        const students = await fetchData('student_results', { orderBy: 'test_date' });
+        renderStudentReports(students);
+    } catch (error) {
+        console.error('Error loading reports:', error);
+    }
 }
 
-// باقي الدوال بدون تغيير
-function loadReports() {
-    const students = JSON.parse(localStorage.getItem('students')) || [];
+function renderStudentReports(students) {
     const tbody = document.querySelector('#students-report tbody');
     
     tbody.innerHTML = '';
@@ -570,11 +557,11 @@ function loadReports() {
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><input type="checkbox" class="student-checkbox" data-index="${index}"></td>
-            <td>${student.name}</td>
+            <td><input type="checkbox" class="student-checkbox" data-id="${student.id}"></td>
+            <td>${student.student_name}</td>
             <td>${student.percentage}%</td>
-            <td>${student.timeTaken}</td>
-            <td>${student.date}</td>
+            <td>${student.time_taken}</td>
+            <td>${new Date(student.test_date).toLocaleDateString('ar-SA')}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -583,28 +570,15 @@ function loadReports() {
     document.getElementById('overall-percentage').textContent = `${overallPercentage}%`;
 }
 
-function showTopStudents() {
+async function showTopStudents() {
     const count = parseInt(document.getElementById('top-students-count').value);
-    const students = JSON.parse(localStorage.getItem('students')) || [];
+    const students = await fetchData('student_results', { orderBy: 'test_date' });
     
     const topStudents = students
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, count);
     
-    const tbody = document.querySelector('#students-report tbody');
-    tbody.innerHTML = '';
-    
-    topStudents.forEach((student, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><input type="checkbox" class="student-checkbox" data-index="${index}"></td>
-            <td>${student.name}</td>
-            <td>${student.percentage}%</td>
-            <td>${student.timeTaken}</td>
-            <td>${student.date}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    renderStudentReports(topStudents);
 }
 
 function toggleSelectAllStudents() {
@@ -614,7 +588,7 @@ function toggleSelectAllStudents() {
     });
 }
 
-function deleteSelectedStudents() {
+async function deleteSelectedStudents() {
     const checkboxes = document.querySelectorAll('.student-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('يرجى اختيار طلاب للحذف');
@@ -622,22 +596,31 @@ function deleteSelectedStudents() {
     }
     
     if (confirm(`هل أنت متأكد من حذف ${checkboxes.length} طالب؟`)) {
-        const students = JSON.parse(localStorage.getItem('students')) || [];
-        const indicesToDelete = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-index')));
+        let successCount = 0;
         
-        const updatedStudents = students.filter((_, index) => !indicesToDelete.includes(index));
-        localStorage.setItem('students', JSON.stringify(updatedStudents));
+        for (const checkbox of checkboxes) {
+            const studentId = checkbox.getAttribute('data-id');
+            const success = await deleteData('student_results', studentId);
+            if (success) successCount++;
+        }
         
-        loadReports();
-        alert('تم حذف الطلاب المحددين بنجاح');
+        await loadReports();
+        showAlert(`تم حذف ${successCount} طالب بنجاح`, 'success');
     }
 }
 
-function deleteAllStudents() {
+async function deleteAllStudents() {
     if (confirm('هل أنت متأكد من حذف جميع الطلاب ونتائجهم؟')) {
-        localStorage.removeItem('students');
-        loadReports();
-        alert('تم حذف جميع الطلاب بنجاح');
+        const students = await fetchData('student_results');
+        let successCount = 0;
+        
+        for (const student of students) {
+            const success = await deleteData('student_results', student.id);
+            if (success) successCount++;
+        }
+        
+        await loadReports();
+        showAlert(`تم حذف ${successCount} طالب بنجاح`, 'success');
     }
 }
 
@@ -645,22 +628,40 @@ function printReport() {
     window.print();
 }
 
-function loadSettings() {
-    document.getElementById('questions-count').value = settings.questionsCount;
-    document.getElementById('login-type').value = settings.loginType;
-    document.getElementById('attempts-count').value = settings.attemptsCount;
-    document.getElementById('results-display').value = settings.resultsDisplay;
+async function loadSettings() {
+    try {
+        const { data, error } = await supabase.rpc('get_settings');
+        
+        if (error) throw error;
+        
+        settings = data || {
+            questionsCount: 10,
+            loginType: 'open',
+            attemptsCount: 1,
+            resultsDisplay: 'show-answers'
+        };
+        
+        updateSettingsForm();
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+function updateSettingsForm() {
+    document.getElementById('questions-count').value = settings.questionsCount || 10;
+    document.getElementById('login-type').value = settings.loginType || 'open';
+    document.getElementById('attempts-count').value = settings.attemptsCount || 1;
+    document.getElementById('results-display').value = settings.resultsDisplay || 'show-answers';
     
-    // تحديث عرض العناصر بناءً على نوع الدخول
     const attemptsGroup = document.getElementById('attempts-count-group');
     const authorizedSection = document.getElementById('authorized-students-section');
-    const isRestricted = settings.loginType === 'restricted';
+    const isRestricted = (settings.loginType || 'open') === 'restricted';
     
     attemptsGroup.style.display = isRestricted ? 'block' : 'none';
     authorizedSection.style.display = isRestricted ? 'block' : 'none';
 }
 
-function saveSettings() {
+async function saveSettings() {
     settings = {
         questionsCount: parseInt(document.getElementById('questions-count').value),
         loginType: document.getElementById('login-type').value,
@@ -668,29 +669,50 @@ function saveSettings() {
         resultsDisplay: document.getElementById('results-display').value
     };
     
-    localStorage.setItem('settings', JSON.stringify(settings));
-    alert('تم حفظ الإعدادات بنجاح');
+    try {
+        const { error } = await supabase
+            .from('settings')
+            .upsert([{
+                setting_key: 'test_settings',
+                setting_value: settings
+            }]);
+
+        if (error) throw error;
+        showAlert('تم حفظ الإعدادات بنجاح', 'success');
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showAlert('خطأ في حفظ الإعدادات', 'error');
+    }
 }
 
-function loadAuthorizedStudents() {
+async function loadAuthorizedStudents() {
+    try {
+        authorizedStudents = await fetchData('authorized_students', { orderBy: 'created_at' });
+        renderAuthorizedStudents();
+    } catch (error) {
+        console.error('Error loading authorized students:', error);
+    }
+}
+
+function renderAuthorizedStudents() {
     const tbody = document.querySelector('#authorized-students-list tbody');
     tbody.innerHTML = '';
     
     authorizedStudents.forEach((student, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${student.id}</td>
-            <td>${student.name}</td>
-            <td>${student.usedAttempts || 0}</td>
+            <td>${student.student_id}</td>
+            <td>${student.student_name}</td>
+            <td>${student.used_attempts || 0}</td>
             <td>
-                <button class="btn-danger btn-small" onclick="deleteAuthorizedStudent(${index})">حذف</button>
+                <button class="btn-danger btn-small" onclick="deleteAuthorizedStudent('${student.id}')">حذف</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-function addAuthorizedStudent() {
+async function addAuthorizedStudent() {
     const studentId = document.getElementById('student-id').value.trim();
     const studentName = document.getElementById('student-name').value.trim();
     
@@ -699,38 +721,38 @@ function addAuthorizedStudent() {
         return;
     }
     
-    // التحقق من عدم تكرار رقم الهوية
-    if (authorizedStudents.some(s => s.id === studentId)) {
-        alert('رقم الهوية/الإقامة مسجل مسبقاً');
-        return;
+    try {
+        const result = await insertData('authorized_students', {
+            student_id: studentId,
+            student_name: studentName,
+            used_attempts: 0,
+            max_attempts: settings.attemptsCount || 1
+        });
+        
+        if (result) {
+            authorizedStudents.push(result);
+            renderAuthorizedStudents();
+            document.getElementById('student-id').value = '';
+            document.getElementById('student-name').value = '';
+            showAlert('تم إضافة الطالب بنجاح', 'success');
+        }
+    } catch (error) {
+        console.error('Error adding authorized student:', error);
+        showAlert('خطأ في إضافة الطالب', 'error');
     }
-    
-    authorizedStudents.push({
-        id: studentId,
-        name: studentName,
-        usedAttempts: 0
-    });
-    
-    saveAuthorizedStudents();
-    loadAuthorizedStudents();
-    
-    // إعادة تعيين الحقول
-    document.getElementById('student-id').value = '';
-    document.getElementById('student-name').value = '';
-    
-    alert('تم إضافة الطالب بنجاح');
 }
 
-function deleteAuthorizedStudent(index) {
+async function deleteAuthorizedStudent(id) {
     if (confirm('هل أنت متأكد من حذف هذا الطالب؟')) {
-        authorizedStudents.splice(index, 1);
-        saveAuthorizedStudents();
-        loadAuthorizedStudents();
+        const success = await deleteData('authorized_students', id);
+        if (success) {
+            authorizedStudents = authorizedStudents.filter(s => s.id !== id);
+            renderAuthorizedStudents();
+            showAlert('تم حذف الطالب بنجاح', 'success');
+        } else {
+            showAlert('خطأ في حذف الطالب', 'error');
+        }
     }
-}
-
-function saveAuthorizedStudents() {
-    localStorage.setItem('authorizedStudents', JSON.stringify(authorizedStudents));
 }
 
 function printAuthorizedStudents() {
