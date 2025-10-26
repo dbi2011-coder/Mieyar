@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مبادرة معيار - واجهة المسؤول</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- تحميل Supabase في الhead -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <header>
@@ -18,19 +20,19 @@
             </div>
         </div>
         <div class="admin-info">
-            <span id="admin-welcome">مرحباً، المسؤول</span>
+            <span>مرحباً، المسؤول</span>
             <button id="logout-btn" class="btn-danger">تسجيل الخروج</button>
         </div>
     </header>
     
     <div class="container">
+        <!-- محتوى الصفحة (نفس المحتوى السابق) -->
         <div class="tabs">
             <button class="tab-btn active" data-tab="questions">إدارة الأسئلة</button>
             <button class="tab-btn" data-tab="reports">التقارير والإحصائيات</button>
             <button class="tab-btn" data-tab="settings">الإعدادات</button>
         </div>
         
-        <!-- قسم إدارة الأسئلة -->
         <div id="questions" class="tab-content active">
             <h2>إضافة سؤال جديد</h2>
             <form id="add-question-form">
@@ -91,7 +93,6 @@
             <div id="questions-list"></div>
         </div>
         
-        <!-- قسم التقارير -->
         <div id="reports" class="tab-content">
             <h2>تقارير الطلاب والإحصائيات</h2>
             
@@ -129,7 +130,6 @@
             <button id="print-report" class="btn-success" style="margin-top: 20px;">طباعة التقرير</button>
         </div>
         
-        <!-- قسم الإعدادات -->
         <div id="settings" class="tab-content">
             <h2>إعدادات الاختبار</h2>
             
@@ -195,58 +195,34 @@
         <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
     </footer>
 
-    <!-- تحميل الملفات بالترتيب الصحيح -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- تحميل الملفات بالترتيب -->
     <script src="js/supabase.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
     
     <script>
-        // الانتظار حتى تحميل Supabase ثم فحص المصادقة
-        function waitForSupabase(callback) {
-            if (window.supabase && window.supabaseLoginAdmin) {
-                callback();
-            } else {
-                console.log('⏳ انتظار تحميل Supabase...');
-                setTimeout(() => waitForSupabase(callback), 100);
-            }
-        }
-        
-        function initializeAdminPage() {
-            console.log('🚀 بدء تهيئة صفحة المسؤول...');
+        // تهيئة الصفحة بعد تحميل كل شيء
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 تهيئة صفحة المسؤول...');
             
             // فحص المصادقة
             if (!isAdminLoggedIn()) {
-                console.log('❌ يجب تسجيل الدخول أولاً');
                 alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
                 window.location.href = 'index.html';
                 return;
             }
             
-            console.log('✅ مسجل دخول - تهيئة الواجهة');
-            
             // تهيئة واجهة المسؤول
-            if (typeof initAdmin === 'function') {
-                initAdmin();
-            }
+            initAdmin();
             
             // إعداد زر تسجيل الخروج
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function() {
-                    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                        logoutAdmin();
-                        window.location.href = 'index.html';
-                    }
-                });
-            }
-        }
-        
-        // بدء التهيئة بعد تحميل Supabase
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 صفحة المسؤول محملة');
-            waitForSupabase(initializeAdminPage);
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                    logoutAdmin();
+                    window.location.href = 'index.html';
+                }
+            });
         });
     </script>
 </body>
