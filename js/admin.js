@@ -82,24 +82,56 @@ function handleQuestionTypeChange(type) {
     standardOptionsSection.style.display = type === 'reading-comprehension' ? 'none' : 'block';
     standardQuestionGroup.style.display = type === 'reading-comprehension' ? 'none' : 'block';
     
-    // إزالة السمة required من الحقول المخفية لمنع الأخطاء
+    // إدارة السمات required بناءً على الحقول المرئية
+    updateRequiredAttributes(type);
+    
     if (type === 'reading-comprehension') {
+        readingQuestions = [];
+        loadReadingQuestions();
+    } else {
+        updateOptionsContainer();
+    }
+}
+
+// دالة جديدة لإدارة السمات required
+function updateRequiredAttributes(questionType) {
+    const questionText = document.getElementById('question-text');
+    const readingPassage = document.getElementById('reading-passage');
+    
+    if (questionType === 'reading-comprehension') {
         // إزالة required من حقول الأسئلة العادية
-        document.getElementById('question-text').required = false;
+        questionText.required = false;
+        readingPassage.required = true;
+        
+        // إزالة required من الخيارات العادية
         document.querySelectorAll('.option-input').forEach(input => {
             input.required = false;
         });
         document.querySelectorAll('input[name="correct-answer"]').forEach(radio => {
             radio.required = false;
         });
-        
-        readingQuestions = [];
-        loadReadingQuestions();
     } else {
         // إعادة required للحقول المرئية
-        document.getElementById('question-text').required = true;
-        updateOptionsContainer();
+        questionText.required = true;
+        readingPassage.required = false;
+        
+        // إضافة required للخيارات المرئية
+        updateOptionsRequiredAttributes();
     }
+}
+
+// دالة جديدة لتحديث السمات required للخيارات
+function updateOptionsRequiredAttributes() {
+    const optionInputs = document.querySelectorAll('.option-input');
+    const correctAnswerRadios = document.querySelectorAll('input[name="correct-answer"]');
+    
+    optionInputs.forEach(input => {
+        input.required = true;
+    });
+    
+    correctAnswerRadios.forEach(radio => {
+        radio.required = true;
+    });
 }
 
 function switchTab(tabId) {
@@ -131,18 +163,22 @@ function updateOptionsContainer() {
         optionDiv.className = 'form-group';
         optionDiv.innerHTML = `
             <label>الخيار ${i}</label>
-            <input type="text" class="option-input" data-option="${i}" placeholder="أدخل نص الخيار ${i}">
+            <input type="text" class="option-input" data-option="${i}" placeholder="أدخل نص الخيار ${i}" required>
         `;
         container.appendChild(optionDiv);
         
         const radioDiv = document.createElement('div');
         radioDiv.className = 'option-item';
         radioDiv.innerHTML = `
-            <input type="radio" name="correct-answer" id="correct-${i}" value="${i}">
+            <input type="radio" name="correct-answer" id="correct-${i}" value="${i}" required>
             <label for="correct-${i}">الخيار ${i}</label>
         `;
         correctAnswerContainer.appendChild(radioDiv);
     }
+    
+    // تحديث السمات required بناءً على نوع السؤال الحالي
+    const currentType = document.getElementById('question-type').value;
+    updateRequiredAttributes(currentType);
 }
 
 function addReadingQuestion() {
@@ -230,8 +266,54 @@ function loadReadingQuestions() {
     readingQuestions = [];
 }
 
+// دالة جديدة للتحقق من صحة النموذج
+function validateQuestionForm() {
+    const questionType = document.getElementById('question-type').value;
+    
+    if (questionType === 'reading-comprehension') {
+        const readingPassage = document.getElementById('reading-passage').value.trim();
+        if (!readingPassage) {
+            alert('يرجى إدخال قطعة الاستيعاب');
+            return false;
+        }
+        
+        const readingQuestionElements = document.querySelectorAll('.reading-question-container');
+        if (readingQuestionElements.length === 0) {
+            alert('يرجى إضافة أسئلة للقطعة');
+            return false;
+        }
+    } else {
+        const questionText = document.getElementById('question-text').value.trim();
+        if (!questionText) {
+            alert('يرجى إدخال نص السؤال');
+            return false;
+        }
+        
+        const correctAnswer = document.querySelector('input[name="correct-answer"]:checked');
+        if (!correctAnswer) {
+            alert('يرجى اختيار الإجابة الصحيحة');
+            return false;
+        }
+        
+        const optionInputs = document.querySelectorAll('.option-input');
+        for (let input of optionInputs) {
+            if (!input.value.trim()) {
+                alert('يرجى إدخال جميع الخيارات');
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
 function addQuestion(e) {
     e.preventDefault();
+    
+    // التحقق اليدوي من الصحة بدلاً من الاعتماد على المتصفح
+    if (!validateQuestionForm()) {
+        return;
+    }
     
     const questionType = document.getElementById('question-type').value;
     
@@ -367,6 +449,9 @@ function resetQuestionForm() {
     document.getElementById('question-type').value = 'multiple';
     updateOptionsContainer();
     document.getElementById('reading-questions-list').innerHTML = '';
+    
+    // تحديث السمات required
+    updateRequiredAttributes('multiple');
 }
 
 function loadQuestions() {
