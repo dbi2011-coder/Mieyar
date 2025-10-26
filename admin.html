@@ -209,13 +209,12 @@
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
     <script>
-        // نظام المصادقة باستخدام Supabase فقط
+        // نظام المصادقة باستخدام sessionStorage
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔍 التحقق من حالة تسجيل الدخول عبر Supabase...');
+            console.log('🔍 التحقق من حالة تسجيل الدخول...');
             
-            // استخدام دالة المصادقة من Supabase مباشرة
+            // فحص حالة الجلسة
             const isLoggedIn = window.supabaseIsAdminLoggedIn();
-            
             console.log('حالة التسجيل:', isLoggedIn);
             
             if (!isLoggedIn) {
@@ -240,6 +239,10 @@
                 initAdmin();
             }
         });
+
+        // فحص الجلسة عند تحميل الصفحة
+        console.log('🔄 فحص حالة الجلسة الحالية...');
+        window.checkAdminSession();
     </script>
 </body>
 </html>
