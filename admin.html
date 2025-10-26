@@ -209,25 +209,37 @@
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
     <script>
-        // التحقق من تسجيل الدخول عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', function() {
+        // التحقق من تسجيل الدخول بعد تحميل جميع الملفات
+        window.addEventListener('load', function() {
+            checkAdminAccess();
+        });
+
+        async function checkAdminAccess() {
+            // إعطاء وقت لتحميل جميع الدوال
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            console.log('فحص تسجيل الدخول...'); // للتdebug
+            console.log('حالة التسجيل:', isAdminLoggedIn()); // للتdebug
+            
             if (!isAdminLoggedIn()) {
                 alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
                 window.location.href = 'index.html';
-                return;
+                return false;
             }
             
-            // تسجيل الخروج
+            // تهيئة واجهة المسؤول
+            initAdmin();
+            
+            // إضافة مستمع حدث تسجيل الخروج
             document.getElementById('logout-btn').addEventListener('click', function() {
                 if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
                     logoutAdmin();
                     window.location.href = 'index.html';
                 }
             });
-
-            // تهيئة واجهة المسؤول
-            initAdmin();
-        });
+            
+            return true;
+        }
     </script>
 </body>
 </html>
