@@ -1,14 +1,14 @@
 // نظام المصادقة مع Supabase
 function loginAdmin(username, password) {
-    return window.loginAdmin(username, password);
+    return window.supabaseLoginAdmin(username, password);
 }
 
 function logoutAdmin() {
-    return window.logoutAdmin();
+    return window.supabaseLogoutAdmin();
 }
 
 function isAdminLoggedIn() {
-    return window.isAdminLoggedIn();
+    return window.supabaseIsAdminLoggedIn();
 }
 
 function getAdminSessionTime() {
