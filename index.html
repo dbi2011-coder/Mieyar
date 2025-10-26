@@ -78,13 +78,17 @@
         });
 
         // معالجة تسجيل الدخول
-        document.getElementById('login-form').addEventListener('submit', function(e) {
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
-            if (loginAdmin(username, password)) {
+            // استخدام دالة المصادقة من Supabase مباشرة
+            const loginSuccess = await window.supabaseLoginAdmin(username, password);
+            
+            if (loginSuccess) {
+                console.log('✅ تسجيل الدخول ناجح - التوجيه إلى لوحة التحكم');
                 window.location.href = 'admin.html';
             } else {
                 alert('اسم المستخدم أو كلمة المرور غير صحيحة');
@@ -98,6 +102,9 @@
                 document.getElementById('login-form').dispatchEvent(new Event('submit'));
             }
         });
+
+        // فحص حالة النظام عند التحميل
+        console.log('🚀 نظام مبادرة معيار جاهز - Supabase Mode');
     </script>
 </body>
 </html>
