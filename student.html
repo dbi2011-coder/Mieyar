@@ -49,9 +49,16 @@
         
         <!-- واجهة الاختبار -->
         <div id="test-container" style="display: none;">
-            <div class="timer" id="timer">00:00:00</div>
+            <div class="test-header">
+                <div class="timer" id="timer">00:00:00</div>
+                <div class="question-counter" id="question-counter">السؤال 1 من 10</div>
+            </div>
             <div id="questions-container"></div>
-            <button id="submit-test" class="btn-success" style="margin-top: 20px;">إنهاء الاختبار</button>
+            <div class="test-navigation">
+                <button id="prev-btn" class="btn-secondary">السابق</button>
+                <button id="next-btn" class="btn-primary">التالي</button>
+                <button id="submit-btn" class="btn-success" style="display: none;">إنهاء الاختبار</button>
+            </div>
         </div>
         
         <!-- واجهة النتائج -->
@@ -67,6 +74,7 @@
     <script>
         // تهيئة واجهة الطالب
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('تهيئة واجهة الطالب...');
             initStudent();
             
             // مستمعي الأحداث للأزرار
@@ -79,8 +87,14 @@
                 }
             });
             
-            document.getElementById('validate-login').addEventListener('click', validateRestrictedLogin);
-            document.getElementById('submit-test').addEventListener('click', submitTest);
+            document.getElementById('validate-login').addEventListener('click', function() {
+                validateRestrictedLogin();
+            });
+            
+            // أزرار التنقل
+            document.getElementById('prev-btn').addEventListener('click', previousQuestion);
+            document.getElementById('next-btn').addEventListener('click', nextQuestion);
+            document.getElementById('submit-btn').addEventListener('click', submitTest);
         });
     </script>
 </body>
