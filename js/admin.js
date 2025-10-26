@@ -454,7 +454,9 @@ function renderQuestions() {
             questionHTML += `
                 <div class="reading-passage">
                     <h5>قطعة الاستيعاب:</h5>
-                    <div class="passage-content">${question.reading_passage}</div>
+                    <div class="passage-content" style="max-width: 100%; overflow-wrap: break-word; word-break: break-word; box-sizing: border-box;">
+                        ${question.reading_passage}
+                    </div>
                 </div>
                 <p><strong>عدد الأسئلة:</strong> ${question.passage_questions.length}</p>
                 <div class="passage-questions">
@@ -630,64 +632,35 @@ function printReport() {
 
 async function loadSettings() {
     try {
-        console.log('📥 جاري تحميل الإعدادات...');
+        const { data, error } = await window.supabase.rpc('get_settings');
         
-        const { data, error } = await supabase
-            .from('settings')
-            .select('setting_value')
-            .eq('setting_key', 'test_settings')
-            .single();
-
-        if (error) {
-            console.log('ℹ️ استخدام الإعدادات الافتراضية');
-            settings = {
-                questionsCount: 10,
-                loginType: 'open',
-                attemptsCount: 1,
-                resultsDisplay: 'show-answers'
-            };
-        } else {
-            console.log('✅ الإعدادات المحملة:', data.setting_value);
-            settings = data.setting_value;
-        }
+        if (error) throw error;
         
-        updateSettingsForm();
-        
-    } catch (error) {
-        console.error('❌ خطأ:', error);
-        settings = {
+        settings = data || {
             questionsCount: 10,
             loginType: 'open',
             attemptsCount: 1,
             resultsDisplay: 'show-answers'
         };
+        
         updateSettingsForm();
+    } catch (error) {
+        console.error('Error loading settings:', error);
     }
 }
 
 function updateSettingsForm() {
-    console.log('🔄 تحديث نموذج الإعدادات:', settings);
-    
-    if (!settings) {
-        console.log('⚠️ الإعدادات غير محددة');
-        return;
-    }
-    
-    // تعبئة الحقول بالقيم الحالية
     document.getElementById('questions-count').value = settings.questionsCount || 10;
     document.getElementById('login-type').value = settings.loginType || 'open';
     document.getElementById('attempts-count').value = settings.attemptsCount || 1;
     document.getElementById('results-display').value = settings.resultsDisplay || 'show-answers';
     
-    // إظهار/إخفاء العناصر بناءً على نوع الدخول
     const attemptsGroup = document.getElementById('attempts-count-group');
     const authorizedSection = document.getElementById('authorized-students-section');
     const isRestricted = (settings.loginType || 'open') === 'restricted';
     
     attemptsGroup.style.display = isRestricted ? 'block' : 'none';
     authorizedSection.style.display = isRestricted ? 'block' : 'none';
-    
-    console.log('✅ تم تحديث نموذج الإعدادات');
 }
 
 async function saveSettings() {
@@ -698,23 +671,18 @@ async function saveSettings() {
         resultsDisplay: document.getElementById('results-display').value
     };
     
-    console.log('💾 حفظ الإعدادات:', settings);
-    
     try {
-        const { error } = await supabase
+        const { error } = await window.supabase
             .from('settings')
-            .update({ 
-                setting_value: settings,
-                updated_at: new Date().toISOString()
-            })
-            .eq('setting_key', 'test_settings');
+            .upsert([{
+                setting_key: 'test_settings',
+                setting_value: settings
+            }]);
 
         if (error) throw error;
-        
         showAlert('تم حفظ الإعدادات بنجاح', 'success');
-        
     } catch (error) {
-        console.error('❌ خطأ:', error);
+        console.error('Error saving settings:', error);
         showAlert('خطأ في حفظ الإعدادات', 'error');
     }
 }
