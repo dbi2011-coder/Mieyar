@@ -14,7 +14,7 @@ async function initStudent() {
 
 async function loadSettings() {
     try {
-        const { data, error } = await supabase.rpc('get_settings');
+        const { data, error } = await window.supabase.rpc('get_settings');
         
         if (error) throw error;
         
@@ -56,7 +56,7 @@ async function validateRestrictedLogin() {
     }
     
     try {
-        const { data, error } = await supabase
+        const { data, error } = await window.supabase
             .from('authorized_students')
             .select('*')
             .eq('student_id', studentId)
@@ -79,7 +79,7 @@ async function validateRestrictedLogin() {
             }
             
             // تحديث عدد المحاولات المستخدمة
-            await supabase
+            await window.supabase
                 .from('authorized_students')
                 .update({ 
                     used_attempts: (data.used_attempts || 0) + 1 
@@ -110,7 +110,7 @@ function startTest(studentName) {
 
 async function loadQuestionsForTest() {
     try {
-        const allQuestions = await fetchData('questions');
+        const allQuestions = await window.supabaseFetchData('questions');
         
         if (allQuestions.length === 0) {
             alert('لا توجد أسئلة متاحة للاختبار');
@@ -282,7 +282,7 @@ async function submitTest() {
     const studentName = localStorage.getItem('currentStudent');
     
     try {
-        await insertData('student_results', {
+        await window.supabaseInsertData('student_results', {
             student_name: studentName,
             score: score,
             total_questions: questions.length,
