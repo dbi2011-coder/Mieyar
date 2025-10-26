@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مبادرة معيار - واجهة المسؤول</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- إضافة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
 </head>
 <body>
     <header>
@@ -34,6 +37,7 @@
         <div id="questions" class="tab-content active">
             <h2>إضافة سؤال جديد</h2>
             <form id="add-question-form">
+                <!-- قسم نص السؤال - سيتم إخفاؤه عند اختيار استيعاب المقروء -->
                 <div class="form-group" id="standard-question-group">
                     <label for="question-text">نص السؤال</label>
                     <textarea id="question-text" rows="3" required></textarea>
@@ -48,11 +52,13 @@
                     </select>
                 </div>
                 
+                <!-- قطعة استيعاب المقروء -->
                 <div class="form-group" id="reading-passage-group" style="display: none;">
                     <label for="reading-passage">قطعة الاستيعاب</label>
                     <textarea id="reading-passage" rows="5" placeholder="أدخل نص القطعة هنا..." required></textarea>
                 </div>
                 
+                <!-- أسئلة استيعاب المقروء -->
                 <div id="reading-questions-container" style="display: none;">
                     <h3>أسئلة القطعة</h3>
                     <div id="reading-questions-list"></div>
@@ -64,6 +70,7 @@
                     <input type="url" id="media-url" placeholder="https://example.com/video.jpg أو https://youtube.com/watch?v=...">
                 </div>
                 
+                <!-- قسم الخيارات والإجابة الصحيحة - سيتم إخفاؤه عند اختيار استيعاب المقروء -->
                 <div id="standard-options-section">
                     <div class="form-group" id="standard-options-group">
                         <label>عدد الخيارات</label>
@@ -95,6 +102,7 @@
         <div id="reports" class="tab-content">
             <h2>تقارير الطلاب والإحصائيات</h2>
             
+            <!-- النسبة العامة -->
             <div class="statistics-card">
                 <h3>النسبة العامة لجميع الطلاب</h3>
                 <div id="overall-percentage" class="percentage-display">0%</div>
@@ -107,6 +115,7 @@
                 <button id="show-top-students" class="btn-success" style="margin-top: 10px;">عرض الأفضل أداءً</button>
             </div>
             
+            <!-- أزرار حذف الطلاب -->
             <div class="form-group" style="margin-top: 20px;">
                 <h3>إدارة بيانات الطلاب</h3>
                 <button id="delete-all-students" class="btn-danger">حذف جميع الطلاب ونتائجهم</button>
@@ -162,6 +171,7 @@
             
             <button id="save-settings" class="btn-success">حفظ الإعدادات</button>
             
+            <!-- قائمة الطلاب المصرح لهم بالدخول -->
             <div id="authorized-students-section" style="margin-top: 30px; display: none;">
                 <h3>قائمة الطلاب المصرح لهم بالدخول</h3>
                 <div class="form-group">
@@ -195,108 +205,40 @@
         <p>إعداد وتصميم: أ/ صالح عبد العزيز عبد الله العجلان - معلم صعوبات التعلم</p>
     </footer>
 
-    <!-- تحميل Supabase أولاً -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    
-    <!-- ثم باقي الملفات -->
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script src="js/admin.js"></script>
-    
     <script>
-        // نظام مصادقة مبسط ومباشر
-        function checkAdminAuth() {
-            console.log('🔐 فحص المصادقة...');
+        // نظام المصادقة باستخدام Supabase فقط
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 التحقق من حالة تسجيل الدخول عبر Supabase...');
             
-            // فحص مباشر من localStorage بدون اعتماد على دوال Supabase
-            const adminLoggedIn = localStorage.getItem('adminLoggedIn');
-            const loginTime = localStorage.getItem('adminLoginTime');
+            // استخدام دالة المصادقة من Supabase مباشرة
+            const isLoggedIn = window.supabaseIsAdminLoggedIn();
             
-            console.log('بيانات المصادقة:', { adminLoggedIn, loginTime });
+            console.log('حالة التسجيل:', isLoggedIn);
             
-            if (!adminLoggedIn || adminLoggedIn !== 'true') {
-                console.log('❌ غير مسجل دخول');
-                return false;
-            }
-            
-            // التحقق من انتهاء الجلسة
-            if (loginTime) {
-                const loginDate = new Date(loginTime);
-                const currentDate = new Date();
-                const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
-                
-                console.log('⏰ مدة الجلسة:', hoursDiff.toFixed(2), 'ساعة');
-                
-                if (hoursDiff > 24) {
-                    console.log('❌ انتهت مدة الجلسة');
-                    localStorage.removeItem('adminLoggedIn');
-                    localStorage.removeItem('adminLoginTime');
-                    return false;
-                }
-            }
-            
-            console.log('✅ مسجل دخول بنجاح');
-            return true;
-        }
-        
-        // تهيئة الصفحة بعد تحميل كل شيء
-        function initializeAdminPage() {
-            console.log('🚀 بدء تهيئة صفحة المسؤول...');
-            
-            // فحص المصادقة أولاً
-            if (!checkAdminAuth()) {
+            if (!isLoggedIn) {
+                console.log('❌ لم يتم تسجيل الدخول - إعادة التوجيه إلى الصفحة الرئيسية');
                 alert('يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة');
                 window.location.href = 'index.html';
                 return;
             }
             
-            console.log('✅ تم التحقق من المصادقة - تهيئة الواجهة');
+            console.log('✅ تم تسجيل الدخول - تهيئة واجهة المسؤول');
             
+            // تسجيل الخروج
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                    window.supabaseLogoutAdmin();
+                    window.location.href = 'index.html';
+                }
+            });
+
             // تهيئة واجهة المسؤول
             if (typeof initAdmin === 'function') {
-                console.log('🔧 جاري تهيئة واجهة المسؤول...');
                 initAdmin();
-            } else {
-                console.error('❌ دالة initAdmin غير موجودة');
             }
-            
-            // إعداد زر تسجيل الخروج
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function() {
-                    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                        localStorage.removeItem('adminLoggedIn');
-                        localStorage.removeItem('adminLoginTime');
-                        localStorage.removeItem('adminUsername');
-                        window.location.href = 'index.html';
-                    }
-                });
-            }
-            
-            console.log('✅ تهيئة الصفحة مكتملة');
-        }
-        
-        // الانتظار حتى تحميل جميع الملفات
-        function waitForAllFiles() {
-            console.log('⏳ انتظار تحميل الملفات...');
-            
-            // التحقق من تحميل جميع الدوال الأساسية
-            if (typeof supabase !== 'undefined' && 
-                typeof initAdmin !== 'undefined' && 
-                typeof isAdminLoggedIn !== 'undefined') {
-                console.log('✅ جميع الملفات محملة');
-                initializeAdminPage();
-            } else {
-                console.log('🔄 لا يزال بعض الملفات جاري التحميل...');
-                setTimeout(waitForAllFiles, 100);
-            }
-        }
-        
-        // بدء العملية عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 صفحة المسؤول محملة - بدء التحقق من الملفات');
-            setTimeout(waitForAllFiles, 300);
         });
     </script>
 </body>
