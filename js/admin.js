@@ -630,22 +630,121 @@ function printReport() {
     window.print();
 }
 
+// دالة حفظ الإعدادات المحسنة
+async function saveSettings() {
+    // جمع البيانات من النموذج
+    const questionsCount = parseInt(document.getElementById('questions-count').value);
+    const loginType = document.getElementById('login-type').value;
+    const attemptsCount = parseInt(document.getElementById('attempts-count').value);
+    const resultsDisplay = document.getElementById('results-display').value;
+    
+    // التحقق من صحة البيانات
+    if (!questionsCount || questionsCount < 1) {
+        alert('يرجى إدخال عدد أسئلة صحيح');
+        return;
+    }
+    
+    if (!attemptsCount || attemptsCount < 1) {
+        alert('يرجى إدخال عدد محاولات صحيح');
+        return;
+    }
+
+    settings = {
+        questionsCount: questionsCount,
+        loginType: loginType,
+        attemptsCount: attemptsCount,
+        resultsDisplay: resultsDisplay
+    };
+    
+    try {
+        console.log('جاري حفظ الإعدادات:', settings);
+        
+        // المحاولة الأولى: استخدام RPC function
+        const { data, error } = await window.supabase.rpc('save_settings', {
+            settings_data: settings
+        });
+
+        if (error) {
+            console.error('خطأ في حفظ الإعدادات (RPC):', error);
+            
+            // المحاولة الثانية: استخدام الجدول مباشرة
+            const { error: upsertError } = await window.supabase
+                .from('settings')
+                .upsert([
+                    {
+                        setting_key: 'test_settings',
+                        setting_value: settings,
+                        updated_at: new Date().toISOString()
+                    }
+                ], {
+                    onConflict: 'setting_key'
+                });
+
+            if (upsertError) {
+                console.error('خطأ في حفظ الإعدادات (المحاولة البديلة):', upsertError);
+                throw upsertError;
+            }
+        }
+        
+        showAlert('تم حفظ الإعدادات بنجاح', 'success');
+        console.log('الإعدادات المحفوظة:', settings);
+        
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showAlert('خطأ في حفظ الإعدادات: ' + error.message, 'error');
+    }
+}
+
 async function loadSettings() {
     try {
+        console.log('جاري تحميل الإعدادات...');
+        
+        // المحاولة الأولى: استخدام RPC function
         const { data, error } = await window.supabase.rpc('get_settings');
         
-        if (error) throw error;
+        if (error) {
+            console.error('خطأ في تحميل الإعدادات (RPC):', error);
+            
+            // المحاولة الثانية: استخدام الجدول مباشرة
+            const { data: settingsData, error: selectError } = await window.supabase
+                .from('settings')
+                .select('*')
+                .eq('setting_key', 'test_settings')
+                .single();
+
+            if (selectError) {
+                console.error('خطأ في تحميل الإعدادات (المحاولة البديلة):', selectError);
+                throw selectError;
+            }
+            
+            settings = settingsData?.setting_value || {
+                questionsCount: 10,
+                loginType: 'open',
+                attemptsCount: 1,
+                resultsDisplay: 'show-answers'
+            };
+        } else {
+            settings = data || {
+                questionsCount: 10,
+                loginType: 'open',
+                attemptsCount: 1,
+                resultsDisplay: 'show-answers'
+            };
+        }
         
-        settings = data || {
+        console.log('الإعدادات المحملة:', settings);
+        updateSettingsForm();
+        
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        // استخدام إعدادات افتراضية في حالة الخطأ
+        settings = {
             questionsCount: 10,
             loginType: 'open',
             attemptsCount: 1,
             resultsDisplay: 'show-answers'
         };
-        
         updateSettingsForm();
-    } catch (error) {
-        console.error('Error loading settings:', error);
     }
 }
 
@@ -661,30 +760,6 @@ function updateSettingsForm() {
     
     attemptsGroup.style.display = isRestricted ? 'block' : 'none';
     authorizedSection.style.display = isRestricted ? 'block' : 'none';
-}
-
-async function saveSettings() {
-    settings = {
-        questionsCount: parseInt(document.getElementById('questions-count').value),
-        loginType: document.getElementById('login-type').value,
-        attemptsCount: parseInt(document.getElementById('attempts-count').value),
-        resultsDisplay: document.getElementById('results-display').value
-    };
-    
-    try {
-        const { error } = await window.supabase
-            .from('settings')
-            .upsert([{
-                setting_key: 'test_settings',
-                setting_value: settings
-            }]);
-
-        if (error) throw error;
-        showAlert('تم حفظ الإعدادات بنجاح', 'success');
-    } catch (error) {
-        console.error('Error saving settings:', error);
-        showAlert('خطأ في حفظ الإعدادات', 'error');
-    }
 }
 
 async function loadAuthorizedStudents() {
@@ -780,7 +855,37 @@ function printAuthorizedStudents() {
     printWindow.print();
 }
 
+// دالة لعرض التنبيهات
+function showAlert(message, type = 'info') {
+    // إزالة أي تنبيهات سابقة
+    const existingAlert = document.querySelector('.custom-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    const alert = document.createElement('div');
+    alert.className = `custom-alert alert-${type}`;
+    alert.textContent = message;
+    alert.style.backgroundColor = type === 'success' ? '#2ecc71' : 
+                                type === 'error' ? '#e74c3c' : 
+                                type === 'warning' ? '#f39c12' : '#3498db';
+    
+    document.body.appendChild(alert);
+    
+    // إزالة التنبيه تلقائياً بعد 5 ثوان
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
 // تحديث الحاوية عند التحميل
 document.addEventListener('DOMContentLoaded', function() {
     updateOptionsContainer();
 });
+
+// جعل الدوال متاحة globally
+window.removeReadingQuestion = removeReadingQuestion;
+window.deleteQuestion = deleteQuestion;
+window.deleteAuthorizedStudent = deleteAuthorizedStudent;
